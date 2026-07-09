@@ -65,73 +65,91 @@ const DEFAULT_DATA = {
 
 // ================= styles =================
 const css = `
-  :root { --ink:#2A2C36; --sub:#8A8D9C; --line:#ECEAF2; --bg:#FAF9F6; --card:#FFFFFF;
-          --iris:#5C6BC0; --iris-soft:#EEF0FA; --amber:#C0763B; --amber-soft:#FAF0E4;
-          --red:#B4504A; --red-soft:#F9ECEA; --green:#5A8A6A; --green-soft:#ECF3EE; }
+  :root { --ink:#3A3335; --sub:#9C8F88; --line:#F2E3D5; --bg:#FFF6EC; --card:#FFFFFF;
+          --pop:#FF7A59; --pop-dark:#E05A3B; --pop-soft:#FFE9E2;
+          --mint:#2FBFA0; --mint-soft:#E0F6EF; --sun:#F5A623; --sun-soft:#FFF1D6;
+          --red:#E85D5D; --red-soft:#FDE4E4; }
   .uz { min-height:100vh; background:var(--bg); color:var(--ink);
-    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif; -webkit-font-smoothing:antialiased; }
-  .uz-wrap { max-width:480px; margin:0 auto; padding:20px 20px 110px; }
-  .uz-brand { font-size:11px; letter-spacing:.22em; color:var(--sub); font-weight:700; margin-bottom:2px; }
-  .uz-page-title { font-family:"Hiragino Mincho ProN","Yu Mincho",serif; font-size:24px; font-weight:600; margin-bottom:4px; }
+    font-family:"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif; -webkit-font-smoothing:antialiased; }
+  .uz-wrap { max-width:480px; margin:0 auto; padding:20px 20px 116px; }
+  .uz-brandrow { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .uz-logo { width:30px; height:30px; border-radius:10px; background:var(--pop); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px;
+    box-shadow:0 3px 0 var(--pop-dark); transform:rotate(-6deg); }
+  .uz-brand { font-size:11px; letter-spacing:.2em; color:var(--sub); font-weight:800; }
+  .uz-page-title { font-size:26px; font-weight:800; margin-bottom:4px; letter-spacing:.02em; }
   .uz-page-sub { font-size:12px; color:var(--sub); line-height:1.8; margin-bottom:16px; }
-  .uz-group-label { font-size:11px; font-weight:700; letter-spacing:.18em; color:var(--sub); margin:18px 2px 8px; }
-  .uz-card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
-  .uz-row { display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:1px solid var(--line); }
+  .uz-group-label { font-size:11px; font-weight:800; letter-spacing:.16em; color:var(--sub); margin:20px 2px 8px; }
+  .uz-card { background:var(--card); border:2px solid var(--line); border-radius:20px; overflow:hidden;
+    box-shadow:0 4px 0 rgba(58,51,53,.05); }
+  .uz-row { display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:2px dashed var(--line); }
   .uz-row:last-child { border-bottom:none; }
   .uz-row-main { flex:1; min-width:0; }
-  .uz-row-title { font-size:15px; }
+  .uz-row-title { font-size:15px; font-weight:700; }
+  .uz-row-title.done { text-decoration:line-through; color:#C9BDB6; }
   .uz-row-sub { font-size:11px; color:var(--sub); margin-top:2px; }
-  .uz-pill { flex-shrink:0; font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .uz-pill { flex-shrink:0; font-size:11px; font-weight:800; padding:4px 10px; border-radius:999px; white-space:nowrap; }
   .uz-pill.red { background:var(--red-soft); color:var(--red); }
-  .uz-pill.amber { background:var(--amber-soft); color:var(--amber); }
-  .uz-pill.green { background:var(--green-soft); color:var(--green); }
-  .uz-buy { flex-shrink:0; border:none; background:var(--iris); color:#fff; border-radius:10px; padding:8px 13px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
-  .uz-ghost { flex-shrink:0; border:1px solid var(--line); background:#fff; color:var(--sub); border-radius:10px; padding:7px 12px; font-size:12px; cursor:pointer; font-family:inherit; }
-  .uz-del { flex-shrink:0; border:none; background:none; color:#C9CBD6; font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
-  .uz-empty { padding:26px 16px; font-size:13px; color:var(--sub); text-align:center; line-height:1.9; }
-  .uz-empty-big { font-size:34px; margin-bottom:6px; }
+  .uz-pill.amber { background:var(--sun-soft); color:#C57F13; }
+  .uz-pill.green { background:var(--mint-soft); color:var(--mint); }
+  .uz-buy { flex-shrink:0; border:none; background:var(--pop); color:#fff; border-radius:12px;
+    padding:9px 14px; font-size:13px; font-weight:800; cursor:pointer; font-family:inherit;
+    box-shadow:0 3px 0 var(--pop-dark); }
+  .uz-buy:active { transform:translateY(2px); box-shadow:none; }
+  .uz-ghost { flex-shrink:0; border:2px solid var(--line); background:#fff; color:var(--sub);
+    border-radius:12px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .uz-ghost:active { background:var(--pop-soft); }
+  .uz-del { flex-shrink:0; border:none; background:none; color:#D8CCC4; font-size:16px; cursor:pointer; padding:4px; font-family:inherit; }
+  .uz-empty { padding:28px 16px; font-size:13px; color:var(--sub); text-align:center; line-height:1.9; }
+  .uz-empty-big { font-size:38px; margin-bottom:6px; }
   .uz-add { display:flex; gap:8px; margin-top:10px; }
-  .uz-input { flex:1; min-width:0; border:1px solid var(--line); border-radius:12px; padding:11px 12px; font-size:14px; background:var(--card); color:var(--ink); font-family:inherit; }
-  .uz-input:focus { outline:2px solid var(--iris); outline-offset:1px; }
-  .uz-btn { border:none; background:var(--iris); color:#fff; border-radius:12px; padding:11px 16px; font-size:14px; font-weight:700; cursor:pointer; flex-shrink:0; font-family:inherit; }
+  .uz-input { flex:1; min-width:0; border:2px solid var(--line); border-radius:14px; padding:11px 12px;
+    font-size:14px; background:var(--card); color:var(--ink); font-family:inherit; }
+  .uz-input:focus { outline:none; border-color:var(--pop); }
+  .uz-btn { border:none; background:var(--pop); color:#fff; border-radius:14px; padding:11px 16px;
+    font-size:14px; font-weight:800; cursor:pointer; flex-shrink:0; font-family:inherit;
+    box-shadow:0 3px 0 var(--pop-dark); }
+  .uz-btn:active { transform:translateY(2px); box-shadow:none; }
   .uz-btn.wide { width:100%; padding:15px; margin-top:14px; }
   .uz-btn:disabled { opacity:.5; }
-  .uz-step { display:flex; align-items:center; flex-shrink:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
-  .uz-step button { border:none; background:none; width:36px; height:36px; font-size:18px; color:var(--iris); cursor:pointer; font-family:inherit; }
-  .uz-step button:active { background:var(--iris-soft); }
-  .uz-step-val { min-width:56px; text-align:center; font-size:14px; font-weight:700; }
+  .uz-step { display:flex; align-items:center; flex-shrink:0; border:2px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; }
+  .uz-step button { border:none; background:none; width:36px; height:36px; font-size:18px; color:var(--pop); font-weight:800; cursor:pointer; font-family:inherit; }
+  .uz-step button:active { background:var(--pop-soft); }
+  .uz-step-val { min-width:56px; text-align:center; font-size:14px; font-weight:800; }
   .uz-step-val small { font-size:10px; color:var(--sub); font-weight:400; }
-  .uz-days-input { width:56px; text-align:center; border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-size:14px; font-family:inherit; background:#fff; color:var(--ink); }
-  .uz-tag { display:inline-flex; align-items:center; gap:5px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:7px 13px; font-size:13px; margin:0 6px 8px 0; cursor:pointer; font-family:inherit; color:var(--ink); }
-  .uz-tag:active { background:var(--iris-soft); border-color:var(--iris); }
-  .uz-tag .uz-tag-cat { font-size:11px; }
-  .uz-ai-btn { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--iris); border:none; border-radius:16px; padding:16px; margin-bottom:12px; cursor:pointer; font-family:inherit; color:#fff; }
+  .uz-days-input { width:56px; text-align:center; border:2px solid var(--line); border-radius:12px; padding:8px 4px; font-size:14px; font-family:inherit; background:#fff; color:var(--ink); font-weight:700; }
+  .uz-tag { display:inline-flex; align-items:center; gap:5px; background:#fff; border:2px solid var(--line); border-radius:999px; padding:7px 13px; font-size:13px; font-weight:700; margin:0 6px 8px 0; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .uz-tag:active { background:var(--pop-soft); border-color:var(--pop); }
+  .uz-tag .uz-tag-cat { font-size:12px; }
+  .uz-ai-btn { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--pop); border:none; border-radius:18px; padding:16px; margin-bottom:12px; cursor:pointer; font-family:inherit; color:#fff; box-shadow:0 4px 0 var(--pop-dark); }
+  .uz-ai-btn:active { transform:translateY(2px); box-shadow:none; }
   .uz-ai-btn:disabled { opacity:.7; }
-  .uz-ai-icon { font-size:26px; }
-  .uz-ai-title { font-size:15px; font-weight:700; }
-  .uz-ai-sub { font-size:11px; opacity:.85; margin-top:2px; }
-  .uz-menu-card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:10px; }
-  .uz-menu-name { font-size:16px; font-weight:700; }
-  .uz-menu-point { font-size:12px; color:var(--iris); margin-top:4px; }
+  .uz-ai-icon { font-size:28px; }
+  .uz-ai-title { font-size:15px; font-weight:800; }
+  .uz-ai-sub { font-size:11px; opacity:.9; margin-top:2px; }
+  .uz-menu-card { background:var(--card); border:2px solid var(--line); border-radius:20px; padding:16px; margin-bottom:10px; box-shadow:0 4px 0 rgba(58,51,53,.05); }
+  .uz-menu-name { font-size:17px; font-weight:800; }
+  .uz-menu-point { font-size:12px; color:var(--pop); font-weight:700; margin-top:4px; }
   .uz-menu-line { font-size:12px; color:var(--sub); margin-top:8px; line-height:1.9; }
-  .uz-ing { display:inline-block; background:var(--green-soft); color:var(--green); border-radius:999px; padding:2px 9px; font-size:11px; font-weight:600; margin:2px 3px 0 0; }
-  .uz-ing.miss { background:var(--amber-soft); color:var(--amber); }
-  .uz-idea { background:var(--iris-soft); border:1px solid #D8DCF2; border-radius:14px; padding:13px 14px; margin-bottom:10px; font-size:13px; line-height:1.8; }
-  .uz-idea b { color:var(--iris); }
+  .uz-ing { display:inline-block; background:var(--mint-soft); color:var(--mint); border-radius:999px; padding:2px 9px; font-size:11px; font-weight:700; margin:2px 3px 0 0; }
+  .uz-ing.miss { background:var(--sun-soft); color:#C57F13; }
+  .uz-idea { background:var(--pop-soft); border:2px solid #FFD3C6; border-radius:16px; padding:13px 14px; margin-bottom:10px; font-size:13px; line-height:1.8; }
+  .uz-idea b { color:var(--pop); }
   .uz-note { font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px; }
-  .uz-banner { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--iris-soft); border:1px solid #D8DCF2; border-radius:16px; padding:14px; margin-bottom:14px; cursor:pointer; font-family:inherit; color:var(--ink); }
-  .uz-banner-icon { font-size:24px; }
-  .uz-banner-title { font-size:14px; font-weight:700; }
+  .uz-banner { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:var(--sun-soft); border:2px solid #F7DCA8; border-radius:18px; padding:14px; margin-bottom:14px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .uz-banner-icon { font-size:26px; }
+  .uz-banner-title { font-size:14px; font-weight:800; }
   .uz-banner-sub { font-size:11px; color:var(--sub); margin-top:2px; }
-  .uz-tabs { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-top:1px solid var(--line); display:flex; justify-content:space-around; padding:8px 4px calc(14px + env(safe-area-inset-bottom)); }
-  .uz-tab { border:none; background:none; font-family:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:#B0B2BF; font-size:10px; font-weight:700; padding:4px 12px; border-radius:12px; position:relative; }
-  .uz-tab.on { color:var(--iris); }
-  .uz-tab-icon { font-size:21px; line-height:1; }
-  .uz-tab-badge { position:absolute; top:0; right:2px; min-width:16px; height:16px; border-radius:999px; background:var(--red); color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
-  .uz-toast { position:fixed; bottom:96px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; font-size:13px; padding:9px 18px; border-radius:999px; z-index:50; max-width:88%; text-align:center; }
+  .uz-tabs { position:fixed; bottom:0; left:0; right:0; background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-top:2px solid var(--line); display:flex; justify-content:space-around; padding:8px 4px calc(14px + env(safe-area-inset-bottom)); }
+  .uz-tab { border:none; background:none; font-family:inherit; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; color:#C4B8B0; font-size:10px; font-weight:800; padding:5px 13px; border-radius:14px; position:relative; }
+  .uz-tab.on { color:var(--pop); background:var(--pop-soft); }
+  .uz-tab-icon { font-size:22px; line-height:1; }
+  .uz-tab-badge { position:absolute; top:-2px; right:2px; min-width:17px; height:17px; border-radius:999px; background:var(--red); color:#fff; font-size:10px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid #fff; }
+  .uz-toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; font-size:13px; font-weight:700; padding:10px 18px; border-radius:999px; z-index:50; max-width:88%; text-align:center; }
   .uz-progress { display:flex; gap:6px; margin:14px 0 20px; }
-  .uz-progress span { flex:1; height:4px; border-radius:99px; background:var(--line); }
-  .uz-progress span.on { background:var(--iris); }
+  .uz-progress span { flex:1; height:6px; border-radius:99px; background:var(--line); }
+  .uz-progress span.on { background:var(--pop); }
+  .uz-textarea { width:100%; min-height:72px; border:2px solid var(--line); border-radius:14px; padding:10px 12px; font-size:12px; font-family:inherit; background:#fff; color:var(--ink); box-sizing:border-box; }
   .uz-spin { display:inline-block; animation:uzrot 1s linear infinite; }
   @keyframes uzrot { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
@@ -275,7 +293,7 @@ function SetupWizard({ onComplete }) {
 
   return (
     <div className="uz-wrap" style={{ paddingBottom: 40 }}>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">{step === 1 ? "① いま家にあるものを登録" : "② どのくらいで使い切る？"}</div>
       <div className="uz-progress"><span className="on" /><span className={step === 2 ? "on" : ""} /></div>
 
@@ -341,10 +359,13 @@ export default function UchiNoZaiko() {
   const [pendingAdd, setPendingAdd] = useState(null); // 在庫タブでの追加途中 {name,unit,cat,qty,days}
   const [quick, setQuick] = useState("");
   const [extraInput, setExtraInput] = useState("");
+  const [importText, setImportText] = useState("");
   const today = todayStr();
 
   // ---- load / save（ブラウザのlocalStorageに永続化） ----
   useEffect(() => {
+    // iOSにストレージの永続化を依頼（自動削除されにくくなる）
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     let loaded = DEFAULT_DATA;
     try {
       const raw = window.localStorage.getItem("uchi-zaiko-v2");
@@ -544,7 +565,7 @@ export default function UchiNoZaiko() {
   // ================= pages =================
   const StockPage = (
     <>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">在庫</div>
       <div className="uz-page-sub">消費ペースから現在の残量を推定しています。買い物と週1回の棚卸しだけで、あとは自動です。</div>
 
@@ -619,7 +640,7 @@ export default function UchiNoZaiko() {
 
   const ShopPage = (
     <>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">買い物</div>
       <div className="uz-page-sub">切れそうなものと、1週間もたせるための購入量を提案します。数は直せますし、見送りもできます。</div>
 
@@ -665,7 +686,7 @@ export default function UchiNoZaiko() {
         <button className="uz-btn" onClick={addExtra}>追加</button>
       </div>
 
-      {shopCount === 0 && <div className="uz-card" style={{ marginTop: 14 }}><div className="uz-empty"><div className="uz-empty-big">🧺</div>いまは足りています。<br />切れそうになったら自動でここに並びます。</div></div>}
+      {shopCount === 0 && <div className="uz-card" style={{ marginTop: 14 }}><div className="uz-empty"><div className="uz-empty-big">📦</div>ザイコくん「いまは足りてるよ！」<br />切れそうになったら自動でここに並びます。</div></div>}
 
       <div className="uz-group-label">買ったものをサッと記録</div>
       <div className="uz-add" style={{ marginTop: 0 }}>
@@ -707,7 +728,7 @@ export default function UchiNoZaiko() {
 
   const MenuPage = (
     <>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">献立</div>
       <div className="uz-page-sub">いま家にある（と推定される）食材：{inventoryText() || "なし"}</div>
       <button className="uz-ai-btn" onClick={suggestMenus} disabled={menuLoading}>
@@ -737,7 +758,7 @@ export default function UchiNoZaiko() {
 
   const CheckPage = (
     <>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">棚卸し</div>
       <div className="uz-page-sub">実際の残量に合わせて数字を直してください（表示は現在の推定値）。差から消費ペースを学習し、予測が週ごとに正確になります。</div>
       {["food", "daily"].map(cat => {
@@ -776,7 +797,7 @@ export default function UchiNoZaiko() {
 
   const SettingsPage = (
     <>
-      <div className="uz-brand">UCHI-NO-ZAIKO</div>
+      <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">設定</div>
       <div className="uz-group-label">品目の管理</div>
       <div className="uz-card">
@@ -811,6 +832,23 @@ export default function UchiNoZaiko() {
           >{data.aiEnabled ? "ON" : "OFF"}</button>
         </div>
       </div>
+
+      <div className="uz-group-label">バックアップ</div>
+      <div className="uz-note" style={{ marginTop: 0, marginBottom: 8 }}>Safariとホーム画面アプリは保存場所が別です。引っ越しや万一に備えて、たまにバックアップをコピーして保存しておくと安心です。</div>
+      <button className="uz-ghost" style={{ width: "100%", padding: 13 }} onClick={async () => {
+        try { await navigator.clipboard.writeText(JSON.stringify(data)); showToast("バックアップをコピーしました（メモ帳などに貼って保存）"); }
+        catch (e) { setImportText(JSON.stringify(data)); showToast("下の欄に表示しました。全選択してコピーしてください"); }
+      }}>📋 データをコピー（バックアップ）</button>
+      <textarea className="uz-textarea" style={{ marginTop: 8 }} placeholder="復元するときは、ここにバックアップを貼り付けて下のボタン" value={importText} onChange={e => setImportText(e.target.value)} />
+      <button className="uz-ghost" style={{ width: "100%", padding: 13, marginTop: 6 }} onClick={() => {
+        try {
+          const parsed = JSON.parse(importText);
+          if (!parsed || !Array.isArray(parsed.items)) throw new Error("形式が違います");
+          persist({ ...DEFAULT_DATA, ...parsed });
+          setImportText("");
+          showToast("復元しました！");
+        } catch (e) { showToast("復元できませんでした。コピーした文字をそのまま貼ってください"); }
+      }}>♻️ 貼り付けたデータで復元</button>
 
       <div className="uz-group-label">データ</div>
       <button

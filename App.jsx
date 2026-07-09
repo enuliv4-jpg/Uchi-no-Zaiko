@@ -150,6 +150,13 @@ const css = `
   .uz-progress span { flex:1; height:6px; border-radius:99px; background:var(--line); }
   .uz-progress span.on { background:var(--pop); }
   .uz-textarea { width:100%; min-height:72px; border:2px solid var(--line); border-radius:14px; padding:10px 12px; font-size:12px; font-family:inherit; background:#fff; color:var(--ink); box-sizing:border-box; }
+  .uz-mascot-row { display:flex; align-items:center; gap:10px; margin:6px 0 18px; }
+  .uz-bubble { position:relative; flex:1; background:#fff; border:2px solid var(--line); border-radius:16px;
+    padding:11px 14px; font-size:13px; font-weight:700; line-height:1.7; box-shadow:0 3px 0 rgba(58,51,53,.05); }
+  .uz-bubble::before { content:""; position:absolute; left:-9px; top:50%; transform:translateY(-50%);
+    border:8px solid transparent; border-right-color:var(--line); border-left:none; }
+  .uz-bubble::after { content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+    border:7px solid transparent; border-right-color:#fff; border-left:none; }
   .uz-spin { display:inline-block; animation:uzrot 1s linear infinite; }
   @keyframes uzrot { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
@@ -239,6 +246,50 @@ const localMenuSuggest = (invItems) => {
     .slice(0, 5);
 };
 
+
+// ================= ザイコくん（マスコット） =================
+function ZaikoKun({ size = 72, mood = "happy" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-label="ザイコくん" style={{ flexShrink: 0 }}>
+      {/* 影 */}
+      <ellipse cx="50" cy="90" rx="27" ry="5" fill="rgba(58,51,53,0.10)" />
+      {/* 開いたフタ */}
+      <polygon points="20,32 50,32 41,15 13,21" fill="#EFC489" stroke="#B07E43" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="80,32 50,32 59,15 87,21" fill="#EFC489" stroke="#B07E43" strokeWidth="3" strokeLinejoin="round" />
+      {/* 体（箱） */}
+      <rect x="19" y="31" width="62" height="52" rx="9" fill="#E4AC6B" stroke="#B07E43" strokeWidth="3" />
+      {/* コーラルのベルト */}
+      <rect x="19" y="66" width="62" height="9" fill="#FF7A59" />
+      <rect x="19" y="31" width="62" height="52" rx="9" fill="none" stroke="#B07E43" strokeWidth="3" />
+      {/* 目 */}
+      {mood === "alert" ? (
+        <>
+          <line x1="33" y1="44" x2="42" y2="47" stroke="#3A3335" strokeWidth="3.5" strokeLinecap="round" />
+          <line x1="67" y1="44" x2="58" y2="47" stroke="#3A3335" strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx="38" cy="53" r="4.2" fill="#3A3335" />
+          <circle cx="62" cy="53" r="4.2" fill="#3A3335" />
+        </>
+      ) : (
+        <>
+          <circle cx="38" cy="50" r="4.5" fill="#3A3335" />
+          <circle cx="62" cy="50" r="4.5" fill="#3A3335" />
+          <circle cx="39.6" cy="48.4" r="1.4" fill="#fff" />
+          <circle cx="63.6" cy="48.4" r="1.4" fill="#fff" />
+        </>
+      )}
+      {/* ほっぺ */}
+      <circle cx="30" cy="58" r="4.2" fill="#FFB3A0" opacity="0.85" />
+      <circle cx="70" cy="58" r="4.2" fill="#FFB3A0" opacity="0.85" />
+      {/* 口 */}
+      {mood === "alert" ? (
+        <circle cx="50" cy="60" r="3.4" fill="none" stroke="#3A3335" strokeWidth="3" />
+      ) : (
+        <path d="M43 58 Q50 65 57 58" fill="none" stroke="#3A3335" strokeWidth="3.4" strokeLinecap="round" />
+      )}
+    </svg>
+  );
+}
+
 // ================= 検索して品目を選ぶ共通UI =================
 function ItemSearch({ existingNames, onPick }) {
   const [q, setQ] = useState("");
@@ -295,6 +346,10 @@ function SetupWizard({ onComplete }) {
     <div className="uz-wrap" style={{ paddingBottom: 40 }}>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">{step === 1 ? "① いま家にあるものを登録" : "② どのくらいで使い切る？"}</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={70} />
+        <div className="uz-bubble">{step === 1 ? "はじめまして、ザイコだよ！家にあるものを教えてね📦" : "それぞれ何日くらいでなくなるか教えて！あとはボクにまかせて〜"}</div>
+      </div>
       <div className="uz-progress"><span className="on" /><span className={step === 2 ? "on" : ""} /></div>
 
       {step === 1 && (<>
@@ -563,10 +618,24 @@ export default function UchiNoZaiko() {
   const stockPill = (i) => i.est <= 0.01 ? ["red", "切れている頃"] : i.dz <= 2 ? ["amber", `あと約${i.dz}日`] : ["green", `あと約${i.dz}日`];
 
   // ================= pages =================
+  // ザイコくんのひとこと（状況に応じて変化）
+  const outNames = items.filter(i => i.kind !== "oneoff" && i.est <= 0.01).map(i => i.name);
+  const soonNames = items.filter(i => i.kind !== "oneoff" && i.est > 0.01 && i.dz <= 2).map(i => i.name);
+  let mascotMood = "happy";
+  let mascotLine = "在庫バッチリだよ〜！今日もいい一日を📦";
+  if (checkDue) { mascotMood = "alert"; mascotLine = `そろそろ棚卸しの時期だよ！前回から${sinceCheck}日たってるみたい`; }
+  else if (outNames.length > 0) { mascotMood = "alert"; mascotLine = `たいへん！${outNames.slice(0, 2).join("と")}が切れてるかも…買い物タブを見て！`; }
+  else if (soonNames.length > 0) { mascotLine = `${soonNames.slice(0, 2).join("と")}がそろそろなくなりそうだよ〜`; }
+  else if (data.extras.length > 0) { mascotLine = `買い物メモが${data.extras.length}件あるよ！忘れないでね`; }
+
   const StockPage = (
     <>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">在庫</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={74} mood={mascotMood} />
+        <div className="uz-bubble">{mascotLine}</div>
+      </div>
       <div className="uz-page-sub">消費ペースから現在の残量を推定しています。買い物と週1回の棚卸しだけで、あとは自動です。</div>
 
       {checkDue && (
@@ -741,7 +810,7 @@ export default function UchiNoZaiko() {
       {menus && menuSource === "local" && menus.length > 0 && data.aiEnabled && (
         <div className="uz-note" style={{ marginTop: 0, marginBottom: 10 }}>⚠️ AIに接続できなかったため、内蔵レシピから提案しています。</div>
       )}
-      {menus && menus.length === 0 && <div className="uz-empty">在庫にマッチする献立が見つかりませんでした。食材を追加するか、もう一度お試しください。</div>}
+      {menus && menus.length === 0 && <div className="uz-empty"><div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><ZaikoKun size={64} mood="alert" /></div>ザイコくん「うーん、いい献立が思いつかない…食材を追加してもう一回きいてみて！」</div>}
       {menus && menus.map((m, i) => (
         <div className="uz-menu-card" key={i}>
           <div className="uz-menu-name">{m.name}</div>

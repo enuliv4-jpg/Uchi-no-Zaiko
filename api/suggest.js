@@ -1,11 +1,14 @@
 // api/suggest.js — Vercel Serverless Function
+// クライアントからの依頼を受けて、サーバー側で Claude API を呼びます。
+// APIキーは環境変数 ANTHROPIC_API_KEY にのみ存在し、ブラウザには渡りません。
+
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-6";
 
 function buildPrompt(type, inventory, list) {
   if (type === "menus") {
     return `家にある食材：${inventory || "なし"}。
 この食材を活かした今夜の家庭料理の献立を3つ提案してください。残り日数が少ない食材を優先。基本調味料は家にある前提。JSONのみで回答:
-{"menus":[{"name":"料理名","uses":["使う家の食材"],"missing":["買い足しが必要な材料(なければ空配列)"],"point":"一言"}]}`;
+{"menus":[{"name":"料理名","uses":["使う家の食材"],"missing":["買い足しが必要な材料(なければ空配列)"],"point":"一言","time":"約20分","steps":["簡潔な作り方の手順を3〜5個。各40文字以内"]}]}`;
   }
   if (type === "ideas") {
     return `家にある食材：${inventory || "なし"}。
@@ -39,7 +42,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1000,
+        max_tokens: 1600,
         messages: [{ role: "user", content: prompt }],
       }),
     });

@@ -14,6 +14,10 @@ const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000)
 const daysSince = (s) => (s ? daysBetween(s, todayStr()) : 0);
 const uid = () => Math.random().toString(36).slice(2, 9);
 const r1 = (n) => Math.round(n * 10) / 10;
+// 0.5刻みが自然な単位（半玉・半本など）。それ以外は1単位で数える
+const HALF_UNITS = ["玉", "本", "kg", "丁", "斤", "袋"];
+const stepOf = (unit) => (HALF_UNITS.includes(unit) ? 0.5 : 1);
+const fmtQ = (v, unit) => (stepOf(unit) === 1 ? Math.max(0, Math.round(v)) : r1(v));
 const kataToHira = (s) => (s || "").replace(/[\u30a1-\u30f6]/g, (m) => String.fromCharCode(m.charCodeAt(0) - 0x60));
 const norm = (s) => kataToHira((s || "").trim().toLowerCase().replace(/\s+/g, ""));
 
@@ -25,27 +29,30 @@ const daysToZero = (it) => (it.ratePerDay <= 0 ? 99 : Math.floor(estStock(it) / 
 // ================= 食材・日用品カタログ =================
 // [表示名, よみ(ひらがな), 単位, カテゴリ]
 const CATALOG = [
-  // --- 野菜 ---
-  ["トマト","とまと","個","food"],["ミニトマト","みにとまと","パック","food"],["きゅうり","きゅうり","本","food"],["なす","なす","本","food"],["ピーマン","ぴーまん","個","food"],["パプリカ","ぱぷりか","個","food"],["キャベツ","きゃべつ","玉","food"],["レタス","れたす","玉","food"],["白菜","はくさい","玉","food"],["ほうれん草","ほうれんそう","束","food"],["小松菜","こまつな","束","food"],["水菜","みずな","束","food"],["ニラ","にら","束","food"],["長ネギ","ながねぎ","本","food"],["玉ねぎ","たまねぎ","個","food"],["じゃがいも","じゃがいも","個","food"],["さつまいも","さつまいも","本","food"],["里芋","さといも","個","food"],["にんじん","にんじん","本","food"],["大根","だいこん","本","food"],["かぶ","かぶ","個","food"],["ごぼう","ごぼう","本","food"],["れんこん","れんこん","節","food"],["ブロッコリー","ぶろっこりー","株","food"],["カリフラワー","かりふらわー","株","food"],["アスパラガス","あすぱらがす","束","food"],["もやし","もやし","袋","food"],["しめじ","しめじ","袋","food"],["えのき","えのき","袋","food"],["しいたけ","しいたけ","個","food"],["まいたけ","まいたけ","袋","food"],["エリンギ","えりんぎ","本","food"],["にんにく","にんにく","玉","food"],["しょうが","しょうが","個","food"],["大葉","おおば","枚","food"],["みょうが","みょうが","個","food"],["オクラ","おくら","袋","food"],["ズッキーニ","ずっきーに","本","food"],["かぼちゃ","かぼちゃ","個","food"],["とうもろこし","とうもろこし","本","food"],["枝豆","えだまめ","袋","food"],["豆苗","とうみょう","袋","food"],["セロリ","せろり","本","food"],["アボカド","あぼかど","個","food"],
-  // --- 果物 ---
-  ["りんご","りんご","個","food"],["バナナ","ばなな","本","food"],["みかん","みかん","個","food"],["いちご","いちご","パック","food"],["ぶどう","ぶどう","房","food"],["梨","なし","個","food"],["桃","もも","個","food"],["キウイ","きうい","個","food"],["レモン","れもん","個","food"],["オレンジ","おれんじ","個","food"],["グレープフルーツ","ぐれーぷふるーつ","個","food"],["パイナップル","ぱいなっぷる","個","food"],["柿","かき","個","food"],["ブルーベリー","ぶるーべりー","パック","food"],
-  // --- 肉 ---
-  ["鶏むね肉","とりむねにく","枚","food"],["鶏もも肉","とりももにく","枚","food"],["ささみ","ささみ","本","food"],["手羽元","てばもと","本","food"],["手羽先","てばさき","本","food"],["豚こま切れ","ぶたこまぎれ","パック","food"],["豚バラ","ぶたばら","パック","food"],["豚ロース","ぶたろーす","枚","food"],["牛こま切れ","ぎゅうこまぎれ","パック","food"],["牛バラ","ぎゅうばら","パック","food"],["ステーキ肉","すてーきにく","枚","food"],["合いびき肉","あいびきにく","パック","food"],["豚ひき肉","ぶたひきにく","パック","food"],["鶏ひき肉","とりひきにく","パック","food"],["ベーコン","べーこん","パック","food"],["ハム","はむ","パック","food"],["ソーセージ","そーせーじ","袋","food"],["鶏レバー","とりればー","パック","food"],
-  // --- 魚介 ---
-  ["鮭","さけ","切身","food"],["サバ","さば","切身","food"],["さんま","さんま","尾","food"],["アジ","あじ","尾","food"],["ぶり","ぶり","切身","food"],["たら","たら","切身","food"],["まぐろ刺身","まぐろさしみ","パック","food"],["サーモン刺身","さーもんさしみ","パック","food"],["しらす","しらす","パック","food"],["ちくわ","ちくわ","本","food"],["かまぼこ","かまぼこ","本","food"],["はんぺん","はんぺん","枚","food"],["えび","えび","パック","food"],["いか","いか","杯","food"],["たこ","たこ","パック","food"],["あさり","あさり","パック","food"],["ツナ缶","つなかん","缶","food"],["サバ缶","さばかん","缶","food"],
-  // --- 卵・乳・大豆 ---
-  ["卵","たまご","個","food"],["牛乳","ぎゅうにゅう","本","food"],["ヨーグルト","よーぐると","個","food"],["チーズ","ちーず","袋","food"],["バター","ばたー","箱","food"],["生クリーム","なまくりーむ","本","food"],["豆腐","とうふ","丁","food"],["納豆","なっとう","パック","food"],["油揚げ","あぶらあげ","枚","food"],["厚揚げ","あつあげ","枚","food"],["豆乳","とうにゅう","本","food"],
-  // --- 主食・粉 ---
-  ["米","こめ","kg","food"],["食パン","しょくぱん","斤","food"],["パン","ぱん","袋","food"],["うどん","うどん","玉","food"],["そば","そば","束","food"],["そうめん","そうめん","束","food"],["パスタ","ぱすた","袋","food"],["中華麺","ちゅうかめん","玉","food"],["餅","もち","個","food"],["シリアル","しりある","箱","food"],["小麦粉","こむぎこ","袋","food"],["パン粉","ぱんこ","袋","food"],["片栗粉","かたくりこ","袋","food"],["ホットケーキミックス","ほっとけーきみっくす","袋","food"],
-  // --- 調味料 ---
-  ["醤油","しょうゆ","本","food"],["みりん","みりん","本","food"],["料理酒","りょうりしゅ","本","food"],["酢","す","本","food"],["砂糖","さとう","袋","food"],["塩","しお","袋","food"],["味噌","みそ","パック","food"],["ケチャップ","けちゃっぷ","本","food"],["マヨネーズ","まよねーず","本","food"],["中濃ソース","ちゅうのうそーす","本","food"],["サラダ油","さらだあぶら","本","food"],["ごま油","ごまあぶら","本","food"],["オリーブオイル","おりーぶおいる","本","food"],["めんつゆ","めんつゆ","本","food"],["ポン酢","ぽんず","本","food"],["焼肉のたれ","やきにくのたれ","本","food"],["カレールー","かれーるー","箱","food"],["コンソメ","こんそめ","箱","food"],["鶏ガラスープの素","とりがらすーぷのもと","袋","food"],["だしの素","だしのもと","袋","food"],["こしょう","こしょう","本","food"],["七味唐辛子","しちみとうがらし","本","food"],["わさび","わさび","本","food"],["からし","からし","本","food"],["はちみつ","はちみつ","本","food"],["ジャム","じゃむ","瓶","food"],
-  // --- その他食品・飲料 ---
-  ["海苔","のり","袋","food"],["ふりかけ","ふりかけ","袋","food"],["梅干し","うめぼし","パック","food"],["キムチ","きむち","パック","food"],["漬物","つけもの","パック","food"],["冷凍餃子","れいとうぎょうざ","袋","food"],["冷凍うどん","れいとううどん","袋","food"],["冷凍野菜","れいとうやさい","袋","food"],["アイス","あいす","個","food"],["ビール","びーる","本","food"],["炭酸水","たんさんすい","本","food"],["お茶","おちゃ","本","food"],["ジュース","じゅーす","本","food"],["コーヒー","こーひー","本","food"],["紅茶","こうちゃ","箱","food"],["緑茶（茶葉）","りょくちゃ","袋","food"],
-  // --- 日用品 ---
-  ["トイレットペーパー","といれっとぺーぱー","ロール","daily"],["キッチンペーパー","きっちんぺーぱー","ロール","daily"],["ティッシュ","てぃっしゅ","箱","daily"],["ウェットティッシュ","うぇっとてぃっしゅ","個","daily"],["シャンプー","しゃんぷー","本","daily"],["トリートメント","とりーとめんと","本","daily"],["ボディソープ","ぼでぃそーぷ","本","daily"],["ハンドソープ","はんどそーぷ","本","daily"],["石鹸","せっけん","個","daily"],["歯磨き粉","はみがきこ","本","daily"],["歯ブラシ","はぶらし","本","daily"],["洗顔料","せんがんりょう","本","daily"],["化粧水","けしょうすい","本","daily"],["ゴミ袋","ごみぶくろ","枚","daily"],["ラップ","らっぷ","本","daily"],["アルミホイル","あるみほいる","本","daily"],["ジップ袋","じっぷぶくろ","枚","daily"],["食器用洗剤","しょっきようせんざい","本","daily"],["スポンジ","すぽんじ","個","daily"],["洗濯洗剤","せんたくせんざい","本","daily"],["柔軟剤","じゅうなんざい","本","daily"],["漂白剤","ひょうはくざい","本","daily"],["お風呂用洗剤","おふろようせんざい","本","daily"],["トイレ用洗剤","といれようせんざい","本","daily"],["掃除シート","そうじしーと","袋","daily"],["除菌スプレー","じょきんすぷれー","本","daily"],["単3電池","たんさんでんち","本","daily"],["単4電池","たんよんでんち","本","daily"],["マスク","ますく","枚","daily"],["絆創膏","ばんそうこう","枚","daily"],["コンタクト洗浄液","こんたくとせんじょうえき","本","daily"],["生理用品","せいりようひん","個","daily"],["おむつ","おむつ","枚","daily"],["ペットフード","ぺっとふーど","袋","daily"],
+  // [表示名, よみ, 単位, カテゴリ, グループ, 常備?]
+  // --- 野菜 🥬 ---
+  ["トマト","とまと","個","food","veg"],["ミニトマト","みにとまと","パック","food","veg"],["きゅうり","きゅうり","本","food","veg"],["なす","なす","本","food","veg"],["ピーマン","ぴーまん","個","food","veg"],["パプリカ","ぱぷりか","個","food","veg"],["キャベツ","きゃべつ","玉","food","veg"],["レタス","れたす","玉","food","veg"],["白菜","はくさい","玉","food","veg"],["ほうれん草","ほうれんそう","束","food","veg"],["小松菜","こまつな","束","food","veg"],["水菜","みずな","束","food","veg"],["ニラ","にら","束","food","veg"],["長ネギ","ながねぎ","本","food","veg"],["玉ねぎ","たまねぎ","個","food","veg"],["じゃがいも","じゃがいも","個","food","veg"],["さつまいも","さつまいも","本","food","veg"],["里芋","さといも","個","food","veg"],["にんじん","にんじん","本","food","veg"],["大根","だいこん","本","food","veg"],["かぶ","かぶ","個","food","veg"],["ごぼう","ごぼう","本","food","veg"],["れんこん","れんこん","節","food","veg"],["ブロッコリー","ぶろっこりー","株","food","veg"],["カリフラワー","かりふらわー","株","food","veg"],["アスパラガス","あすぱらがす","束","food","veg"],["もやし","もやし","袋","food","veg"],["しめじ","しめじ","袋","food","veg"],["えのき","えのき","袋","food","veg"],["しいたけ","しいたけ","個","food","veg"],["まいたけ","まいたけ","袋","food","veg"],["エリンギ","えりんぎ","本","food","veg"],["にんにく","にんにく","玉","food","veg"],["しょうが","しょうが","個","food","veg"],["大葉","おおば","枚","food","veg"],["みょうが","みょうが","個","food","veg"],["オクラ","おくら","袋","food","veg"],["ズッキーニ","ずっきーに","本","food","veg"],["かぼちゃ","かぼちゃ","個","food","veg"],["とうもろこし","とうもろこし","本","food","veg"],["枝豆","えだまめ","袋","food","veg"],["豆苗","とうみょう","袋","food","veg"],["セロリ","せろり","本","food","veg"],["アボカド","あぼかど","個","food","veg"],
+  // --- 果物 🍎 ---
+  ["りんご","りんご","個","food","fruit"],["バナナ","ばなな","本","food","fruit"],["みかん","みかん","個","food","fruit"],["いちご","いちご","パック","food","fruit"],["ぶどう","ぶどう","房","food","fruit"],["梨","なし","個","food","fruit"],["桃","もも","個","food","fruit"],["キウイ","きうい","個","food","fruit"],["レモン","れもん","個","food","fruit"],["オレンジ","おれんじ","個","food","fruit"],["グレープフルーツ","ぐれーぷふるーつ","個","food","fruit"],["パイナップル","ぱいなっぷる","個","food","fruit"],["柿","かき","個","food","fruit"],["ブルーベリー","ぶるーべりー","パック","food","fruit"],
+  // --- 肉 🥩 ---
+  ["鶏むね肉","とりむねにく","枚","food","meat"],["鶏もも肉","とりももにく","枚","food","meat"],["ささみ","ささみ","本","food","meat"],["手羽元","てばもと","本","food","meat"],["手羽先","てばさき","本","food","meat"],["豚こま切れ","ぶたこまぎれ","パック","food","meat"],["豚バラ","ぶたばら","パック","food","meat"],["豚ロース","ぶたろーす","枚","food","meat"],["牛こま切れ","ぎゅうこまぎれ","パック","food","meat"],["牛バラ","ぎゅうばら","パック","food","meat"],["ステーキ肉","すてーきにく","枚","food","meat"],["合いびき肉","あいびきにく","パック","food","meat"],["豚ひき肉","ぶたひきにく","パック","food","meat"],["鶏ひき肉","とりひきにく","パック","food","meat"],["ベーコン","べーこん","パック","food","meat"],["ハム","はむ","パック","food","meat"],["ソーセージ","そーせーじ","袋","food","meat"],["鶏レバー","とりればー","パック","food","meat"],
+  // --- 魚介 🐟 ---
+  ["鮭","さけ","切身","food","fish"],["サバ","さば","切身","food","fish"],["さんま","さんま","尾","food","fish"],["アジ","あじ","尾","food","fish"],["ぶり","ぶり","切身","food","fish"],["たら","たら","切身","food","fish"],["まぐろ刺身","まぐろさしみ","パック","food","fish"],["サーモン刺身","さーもんさしみ","パック","food","fish"],["しらす","しらす","パック","food","fish"],["ちくわ","ちくわ","本","food","fish"],["かまぼこ","かまぼこ","本","food","fish"],["はんぺん","はんぺん","枚","food","fish"],["えび","えび","パック","food","fish"],["いか","いか","杯","food","fish"],["たこ","たこ","パック","food","fish"],["あさり","あさり","パック","food","fish"],["ツナ缶","つなかん","缶","food","fish"],["サバ缶","さばかん","缶","food","fish"],
+  // --- 卵 🥚・牛乳 🥛・乳製品・大豆 🫘 ---
+  ["卵","たまご","個","food","egg"],["牛乳","ぎゅうにゅう","本","food","milk"],["ヨーグルト","よーぐると","個","food","dairy"],["チーズ","ちーず","袋","food","dairy"],["バター","ばたー","箱","food","dairy"],["生クリーム","なまくりーむ","本","food","dairy"],["豆乳","とうにゅう","本","food","dairy"],["豆腐","とうふ","丁","food","soy"],["納豆","なっとう","パック","food","soy"],["油揚げ","あぶらあげ","枚","food","soy"],["厚揚げ","あつあげ","枚","food","soy"],
+  // --- 主食・粉 🍚 ---
+  ["米","こめ","kg","food","staple"],["食パン","しょくぱん","斤","food","staple"],["パン","ぱん","袋","food","staple"],["うどん","うどん","玉","food","staple"],["そば","そば","束","food","staple"],["そうめん","そうめん","束","food","staple"],["パスタ","ぱすた","袋","food","staple"],["中華麺","ちゅうかめん","玉","food","staple"],["餅","もち","個","food","staple"],["シリアル","しりある","箱","food","staple"],["小麦粉","こむぎこ","袋","food","staple",1],["パン粉","ぱんこ","袋","food","staple",1],["片栗粉","かたくりこ","袋","food","staple",1],["ホットケーキミックス","ほっとけーきみっくす","袋","food","staple"],
+  // --- 調味料 🧂（一度登録すれば「常備」扱い） ---
+  ["醤油","しょうゆ","本","food","seasoning",1],["みりん","みりん","本","food","seasoning",1],["料理酒","りょうりしゅ","本","food","seasoning",1],["酢","す","本","food","seasoning",1],["砂糖","さとう","袋","food","seasoning",1],["塩","しお","袋","food","seasoning",1],["味噌","みそ","パック","food","seasoning",1],["ケチャップ","けちゃっぷ","本","food","seasoning",1],["マヨネーズ","まよねーず","本","food","seasoning",1],["中濃ソース","ちゅうのうそーす","本","food","seasoning",1],["サラダ油","さらだあぶら","本","food","seasoning",1],["ごま油","ごまあぶら","本","food","seasoning",1],["オリーブオイル","おりーぶおいる","本","food","seasoning",1],["めんつゆ","めんつゆ","本","food","seasoning",1],["ポン酢","ぽんず","本","food","seasoning",1],["焼肉のたれ","やきにくのたれ","本","food","seasoning",1],["カレールー","かれーるー","箱","food","seasoning",1],["コンソメ","こんそめ","箱","food","seasoning",1],["鶏ガラスープの素","とりがらすーぷのもと","袋","food","seasoning",1],["だしの素","だしのもと","袋","food","seasoning",1],["こしょう","こしょう","本","food","seasoning",1],["七味唐辛子","しちみとうがらし","本","food","seasoning",1],["わさび","わさび","本","food","seasoning",1],["からし","からし","本","food","seasoning",1],["はちみつ","はちみつ","本","food","seasoning",1],["ジャム","じゃむ","瓶","food","seasoning",1],
+  // --- コーヒー ☕️・飲み物 🥤・その他 🍱 ---
+  ["コーヒー","こーひー","本","food","coffee"],["紅茶","こうちゃ","箱","food","drink"],["緑茶（茶葉）","りょくちゃ","袋","food","drink"],["お茶","おちゃ","本","food","drink"],["ビール","びーる","本","food","drink"],["炭酸水","たんさんすい","本","food","drink"],["ジュース","じゅーす","本","food","drink"],["海苔","のり","袋","food","other"],["ふりかけ","ふりかけ","袋","food","other"],["梅干し","うめぼし","パック","food","other"],["キムチ","きむち","パック","food","other"],["漬物","つけもの","パック","food","other"],["冷凍餃子","れいとうぎょうざ","袋","food","other"],["冷凍うどん","れいとううどん","袋","food","other"],["冷凍野菜","れいとうやさい","袋","food","other"],["アイス","あいす","個","food","other"],
+  // --- 日用品 🧻 ---
+  ["トイレットペーパー","といれっとぺーぱー","ロール","daily","daily"],["キッチンペーパー","きっちんぺーぱー","ロール","daily","daily"],["ティッシュ","てぃっしゅ","箱","daily","daily"],["ウェットティッシュ","うぇっとてぃっしゅ","個","daily","daily"],["シャンプー","しゃんぷー","本","daily","daily"],["トリートメント","とりーとめんと","本","daily","daily"],["ボディソープ","ぼでぃそーぷ","本","daily","daily"],["ハンドソープ","はんどそーぷ","本","daily","daily"],["石鹸","せっけん","個","daily","daily"],["歯磨き粉","はみがきこ","本","daily","daily"],["歯ブラシ","はぶらし","本","daily","daily"],["洗顔料","せんがんりょう","本","daily","daily"],["化粧水","けしょうすい","本","daily","daily"],["ゴミ袋","ごみぶくろ","枚","daily","daily"],["ラップ","らっぷ","本","daily","daily"],["アルミホイル","あるみほいる","本","daily","daily"],["ジップ袋","じっぷぶくろ","枚","daily","daily"],["食器用洗剤","しょっきようせんざい","本","daily","daily"],["スポンジ","すぽんじ","個","daily","daily"],["洗濯洗剤","せんたくせんざい","本","daily","daily"],["柔軟剤","じゅうなんざい","本","daily","daily"],["漂白剤","ひょうはくざい","本","daily","daily"],["お風呂用洗剤","おふろようせんざい","本","daily","daily"],["トイレ用洗剤","といれようせんざい","本","daily","daily"],["掃除シート","そうじしーと","袋","daily","daily"],["除菌スプレー","じょきんすぷれー","本","daily","daily"],["単3電池","たんさんでんち","本","daily","daily"],["単4電池","たんよんでんち","本","daily","daily"],["マスク","ますく","枚","daily","daily"],["絆創膏","ばんそうこう","枚","daily","daily"],["コンタクト洗浄液","こんたくとせんじょうえき","本","daily","daily"],["生理用品","せいりようひん","個","daily","daily"],["おむつ","おむつ","枚","daily","daily"],["ペットフード","ぺっとふーど","袋","daily","daily"],
 ];
 const CAT_LABEL = { food: "食材", daily: "日用品" };
-const catIcon = (c) => (c === "daily" ? "🧻" : "🥬");
+const catIcon = (c) => (c === "daily" ? "🧻" : "🍽");
+const GROUP_ICONS = { veg: "🥬", fruit: "🍎", meat: "🥩", fish: "🐟", egg: "🥚", milk: "🥛", dairy: "🧀", soy: "🫘", staple: "🍚", seasoning: "🧂", coffee: "☕️", drink: "🥤", other: "🍱", daily: "🧻" };
+const itemIcon = (it) => GROUP_ICONS[it.g] || (it.cat === "daily" ? "🧻" : "🍱");
 const searchCatalog = (q, existingNames) => {
   const nq = norm(q);
   if (!nq) return [];
@@ -247,45 +254,66 @@ const localMenuSuggest = (invItems) => {
 };
 
 
-// ================= ザイコくん（マスコット） =================
+// ================= ザイコくん（マスコット・しっかり者） =================
 function ZaikoKun({ size = 72, mood = "happy" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" aria-label="ザイコくん" style={{ flexShrink: 0 }}>
       {/* 影 */}
-      <ellipse cx="50" cy="90" rx="27" ry="5" fill="rgba(58,51,53,0.10)" />
-      {/* 開いたフタ */}
-      <polygon points="20,32 50,32 41,15 13,21" fill="#EFC489" stroke="#B07E43" strokeWidth="3" strokeLinejoin="round" />
-      <polygon points="80,32 50,32 59,15 87,21" fill="#EFC489" stroke="#B07E43" strokeWidth="3" strokeLinejoin="round" />
+      <ellipse cx="50" cy="91" rx="28" ry="5" fill="rgba(58,51,53,0.10)" />
+      {/* きちんと閉じたフタ（しっかり者はフタも閉める） */}
+      <rect x="16" y="24" width="68" height="12" rx="4" fill="#EFC489" stroke="#B07E43" strokeWidth="3" />
+      <line x1="50" y1="24" x2="50" y2="36" stroke="#B07E43" strokeWidth="2.5" />
       {/* 体（箱） */}
-      <rect x="19" y="31" width="62" height="52" rx="9" fill="#E4AC6B" stroke="#B07E43" strokeWidth="3" />
+      <rect x="20" y="34" width="60" height="50" rx="8" fill="#E4AC6B" stroke="#B07E43" strokeWidth="3" />
       {/* コーラルのベルト */}
-      <rect x="19" y="66" width="62" height="9" fill="#FF7A59" />
-      <rect x="19" y="31" width="62" height="52" rx="9" fill="none" stroke="#B07E43" strokeWidth="3" />
+      <rect x="20" y="68" width="60" height="8" fill="#FF7A59" />
+      <rect x="20" y="34" width="60" height="50" rx="8" fill="none" stroke="#B07E43" strokeWidth="3" />
+      {/* 丸メガネ */}
+      <circle cx="38" cy="51" r="8.5" fill="rgba(255,255,255,0.55)" stroke="#3A3335" strokeWidth="2.6" />
+      <circle cx="62" cy="51" r="8.5" fill="rgba(255,255,255,0.55)" stroke="#3A3335" strokeWidth="2.6" />
+      <line x1="46.5" y1="51" x2="53.5" y2="51" stroke="#3A3335" strokeWidth="2.6" />
+      <line x1="29.5" y1="49" x2="21" y2="46" stroke="#3A3335" strokeWidth="2.4" />
+      <line x1="70.5" y1="49" x2="79" y2="46" stroke="#3A3335" strokeWidth="2.4" />
       {/* 目 */}
       {mood === "alert" ? (
         <>
-          <line x1="33" y1="44" x2="42" y2="47" stroke="#3A3335" strokeWidth="3.5" strokeLinecap="round" />
-          <line x1="67" y1="44" x2="58" y2="47" stroke="#3A3335" strokeWidth="3.5" strokeLinecap="round" />
-          <circle cx="38" cy="53" r="4.2" fill="#3A3335" />
-          <circle cx="62" cy="53" r="4.2" fill="#3A3335" />
+          <line x1="34" y1="47" x2="42" y2="50" stroke="#3A3335" strokeWidth="3" strokeLinecap="round" />
+          <line x1="66" y1="47" x2="58" y2="50" stroke="#3A3335" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="38" cy="53" r="3.4" fill="#3A3335" />
+          <circle cx="62" cy="53" r="3.4" fill="#3A3335" />
+          <path d="M78 30 q4 5 0 8 q-4 -3 0 -8" fill="#8FD3EF" />
         </>
       ) : (
         <>
-          <circle cx="38" cy="50" r="4.5" fill="#3A3335" />
-          <circle cx="62" cy="50" r="4.5" fill="#3A3335" />
-          <circle cx="39.6" cy="48.4" r="1.4" fill="#fff" />
-          <circle cx="63.6" cy="48.4" r="1.4" fill="#fff" />
+          <circle cx="38" cy="51" r="3.8" fill="#3A3335" />
+          <circle cx="62" cy="51" r="3.8" fill="#3A3335" />
+          <circle cx="39.4" cy="49.6" r="1.2" fill="#fff" />
+          <circle cx="63.4" cy="49.6" r="1.2" fill="#fff" />
         </>
       )}
       {/* ほっぺ */}
-      <circle cx="30" cy="58" r="4.2" fill="#FFB3A0" opacity="0.85" />
-      <circle cx="70" cy="58" r="4.2" fill="#FFB3A0" opacity="0.85" />
+      <circle cx="28.5" cy="59" r="3.8" fill="#FFB3A0" opacity="0.85" />
+      <circle cx="71.5" cy="59" r="3.8" fill="#FFB3A0" opacity="0.85" />
       {/* 口 */}
       {mood === "alert" ? (
-        <circle cx="50" cy="60" r="3.4" fill="none" stroke="#3A3335" strokeWidth="3" />
+        <circle cx="50" cy="62" r="3" fill="none" stroke="#3A3335" strokeWidth="2.8" />
       ) : (
-        <path d="M43 58 Q50 65 57 58" fill="none" stroke="#3A3335" strokeWidth="3.4" strokeLinecap="round" />
+        <path d="M44.5 60.5 Q50 65.5 55.5 60.5" fill="none" stroke="#3A3335" strokeWidth="3" strokeLinecap="round" />
       )}
+      {/* チェックボード（在庫リスト） */}
+      <g transform="rotate(8 76 74)">
+        <rect x="66" y="60" width="22" height="28" rx="3" fill="#FFFDF8" stroke="#B07E43" strokeWidth="2.6" />
+        <rect x="72.5" y="56.5" width="9" height="6" rx="2" fill="#2FBFA0" />
+        <path d="M70 69 l2.4 2.4 4 -4.4" fill="none" stroke="#2FBFA0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="79" y1="69.5" x2="84.5" y2="69.5" stroke="#D8CCC4" strokeWidth="2" strokeLinecap="round" />
+        <path d="M70 77 l2.4 2.4 4 -4.4" fill="none" stroke="#2FBFA0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="79" y1="77.5" x2="84.5" y2="77.5" stroke="#D8CCC4" strokeWidth="2" strokeLinecap="round" />
+      </g>
+      {/* えんぴつ（耳の上） */}
+      <g transform="rotate(-24 24 30)">
+        <rect x="18" y="27" width="13" height="4" rx="1.4" fill="#F5A623" stroke="#B07E43" strokeWidth="1.6" />
+        <polygon points="31,26.6 35.5,29 31,31.4" fill="#FFE3B3" stroke="#B07E43" strokeWidth="1.4" />
+      </g>
     </svg>
   );
 }
@@ -301,13 +329,13 @@ function ItemSearch({ existingNames, onPick }) {
         <input className="uz-input" placeholder="食材・日用品を検索（例：ズッキーニ）" value={q} onChange={e => setQ(e.target.value)} />
       </div>
       <div style={{ marginTop: 10, minHeight: 8 }}>
-        {hits.map(([name, kana, unit, cat]) => (
-          <button className="uz-tag" key={name} onClick={() => { onPick({ name, unit, cat }); setQ(""); }}>
-            <span className="uz-tag-cat">{catIcon(cat)}</span>{name}<span style={{ color: "#B0B2BF", fontSize: 11 }}>＋</span>
+        {hits.map(([name, kana, unit, cat, g, pantry]) => (
+          <button className="uz-tag" key={name} onClick={() => { onPick({ name, unit, cat, g: g || "other", pantry: !!pantry }); setQ(""); }}>
+            <span className="uz-tag-cat">{GROUP_ICONS[g] || catIcon(cat)}</span>{name}<span style={{ color: "#B0B2BF", fontSize: 11 }}>＋</span>
           </button>
         ))}
         {showCustom && (
-          <button className="uz-tag" style={{ borderStyle: "dashed" }} onClick={() => { onPick({ name: q.trim(), unit: "個", cat: "food", custom: true }); setQ(""); }}>
+          <button className="uz-tag" style={{ borderStyle: "dashed" }} onClick={() => { onPick({ name: q.trim(), unit: "個", cat: "food", g: "other", custom: true }); setQ(""); }}>
             ✏️ 「{q.trim()}」を新しく登録
           </button>
         )}
@@ -323,17 +351,22 @@ function SetupWizard({ onComplete }) {
   const [pending, setPending] = useState([]); // {name, unit, cat, qty, days}
   const existingNames = new Set(pending.map(p => norm(p.name)));
 
-  const pick = (e) => setPending(ps => [...ps, { ...e, qty: 1, days: e.cat === "daily" ? 30 : 7 }]);
-  const setQty = (i, d) => setPending(ps => ps.map((p, idx) => idx === i ? { ...p, qty: Math.max(0.5, r1(p.qty + d)) } : p));
+  const pick = (e) => setPending(ps => [...ps, { ...e, qty: 1, days: e.pantry ? null : (e.cat === "daily" ? 30 : 7) }]);
+  const setQty = (i, d) => setPending(ps => ps.map((p, idx) => idx === i ? { ...p, qty: Math.max(stepOf(p.unit), r1(p.qty + d)) } : p));
   const setDays = (i, v) => setPending(ps => ps.map((p, idx) => idx === i ? { ...p, days: v } : p));
   const remove = (i) => setPending(ps => ps.filter((_, idx) => idx !== i));
 
   const finish = () => {
     const t = todayStr();
     const items = pending.map(p => {
+      if (p.pantry) {
+        return { id: uid(), name: p.name, unit: p.unit, cat: p.cat, g: p.g || "other",
+          stock: p.qty, stockDate: t, purchasedSince: 0, ratePerDay: 0,
+          buyQty: 1, kind: "pantry", snoozeUntil: "" };
+      }
       const days = Math.max(1, parseFloat(p.days) || 7);
       return {
-        id: uid(), name: p.name, unit: p.unit, cat: p.cat,
+        id: uid(), name: p.name, unit: p.unit, cat: p.cat, g: p.g || "other",
         stock: p.qty, stockDate: t, purchasedSince: 0,
         ratePerDay: r1(Math.max(0.01, p.qty / days)),
         buyQty: 1, kind: "regular", snoozeUntil: "",
@@ -360,11 +393,11 @@ function SetupWizard({ onComplete }) {
           <div className="uz-card">
             {pending.map((p, i) => (
               <div className="uz-row" key={p.name}>
-                <div className="uz-row-main"><div className="uz-row-title">{catIcon(p.cat)} {p.name}</div></div>
+                <div className="uz-row-main"><div className="uz-row-title">{itemIcon(p)} {p.name}</div></div>
                 <div className="uz-step">
-                  <button onClick={() => setQty(i, -0.5)}>−</button>
+                  <button onClick={() => setQty(i, -stepOf(p.unit))}>−</button>
                   <div className="uz-step-val">{p.qty}<small>{p.unit}</small></div>
-                  <button onClick={() => setQty(i, +0.5)}>＋</button>
+                  <button onClick={() => setQty(i, +stepOf(p.unit))}>＋</button>
                 </div>
                 <button className="uz-del" onClick={() => remove(i)}>×</button>
               </div>
@@ -383,11 +416,15 @@ function SetupWizard({ onComplete }) {
           {pending.map((p, i) => (
             <div className="uz-row" key={p.name}>
               <div className="uz-row-main">
-                <div className="uz-row-title">{catIcon(p.cat)} {p.name}</div>
-                <div className="uz-row-sub">{p.qty}{p.unit} を…</div>
+                <div className="uz-row-title">{itemIcon(p)} {p.name}</div>
+                <div className="uz-row-sub">{p.pantry ? "調味料などの常備品" : `${p.qty}${p.unit} を…`}</div>
               </div>
-              <input className="uz-days-input" type="number" min="1" value={p.days} onChange={e => setDays(i, e.target.value)} />
-              <span style={{ fontSize: 12, color: "#8A8D9C", flexShrink: 0 }}>日で使い切る</span>
+              {p.pantry ? (
+                <span className="uz-pill green">ずっとある扱い</span>
+              ) : (<>
+                <input className="uz-days-input" type="number" min="1" value={p.days} onChange={e => setDays(i, e.target.value)} />
+                <span style={{ fontSize: 12, color: "#8A8D9C", flexShrink: 0 }}>日で使い切る</span>
+              </>)}
             </div>
           ))}
         </div>
@@ -438,7 +475,7 @@ export default function UchiNoZaiko() {
   useEffect(() => {
     if (tab === "check" && data && !checkDraft) {
       const d = {};
-      data.items.forEach(i => { d[i.id] = estStock(i); });
+      data.items.forEach(i => { d[i.id] = fmtQ(estStock(i), i.unit); });
       setCheckDraft(d);
     }
   }, [tab, data]);
@@ -460,16 +497,17 @@ export default function UchiNoZaiko() {
   const items = data.items.map(it => ({ ...it, est: estStock(it), dz: daysToZero(it) }));
   const snoozed = (it) => it.snoozeUntil && it.snoozeUntil > today;
   // ④ 買い物提案：定番かつ2日以内に切れる予測（見送り中は除く）
-  const needs = items.filter(i => i.kind !== "oneoff" && i.dz <= 2 && !snoozed(i)).sort((a, b) => a.dz - b.dz);
-  const snoozedList = items.filter(i => i.kind !== "oneoff" && i.dz <= 2 && snoozed(i));
+  const needs = items.filter(i => i.kind !== "oneoff" && i.kind !== "pantry" && i.dz <= 2 && !snoozed(i)).sort((a, b) => a.dz - b.dz);
+  const snoozedList = items.filter(i => i.kind !== "oneoff" && i.kind !== "pantry" && i.dz <= 2 && snoozed(i));
   const shopCount = needs.length + data.extras.length;
   const sinceCheck = data.lastCheck ? daysSince(data.lastCheck) : 99;
   const checkDue = sinceCheck >= 7;
   // おすすめ購入量：1週間分をカバーする量（0.5刻み切り上げ、最低は普段の購入単位）
   const suggestQty = (it) => {
+    const st = stepOf(it.unit);
     const deficit = it.ratePerDay * 7 - it.est;
-    const q = Math.ceil(Math.max(deficit, it.buyQty || 1) * 2) / 2;
-    return Math.max(0.5, q);
+    const q = Math.ceil(Math.max(deficit, it.buyQty || 1) / st) * st;
+    return Math.max(st, r1(q));
   };
 
   // ---- actions ----
@@ -521,7 +559,8 @@ export default function UchiNoZaiko() {
         applied.push(`${it.name}+${q}`);
       } else {
         const hit = CATALOG.find(([n]) => norm(n) === norm(name));
-        next = { ...next, items: [...next.items, { id: uid(), name, unit: hit ? hit[2] : "個", cat: hit ? hit[3] : "food", stock: qty !== null ? qty : 1, stockDate: today, purchasedSince: 0, ratePerDay: 0.3, buyQty: 1, kind: "oneoff", snoozeUntil: "" }] };
+        const isPantry = !!(hit && hit[5]);
+        next = { ...next, items: [...next.items, { id: uid(), name, unit: hit ? hit[2] : "個", cat: hit ? hit[3] : "food", g: hit ? (hit[4] || "other") : "other", stock: qty !== null ? qty : 1, stockDate: today, purchasedSince: 0, ratePerDay: isPantry ? 0 : 0.3, buyQty: 1, kind: isPantry ? "pantry" : "oneoff", snoozeUntil: "" }] };
         created.push(name);
       }
       next = { ...next, extras: next.extras.filter(ex => !(norm(ex.name) === norm(name) || norm(name).includes(norm(ex.name)))) };
@@ -534,6 +573,7 @@ export default function UchiNoZaiko() {
   const stepDraft = (id, d) => setCheckDraft(dr => ({ ...dr, [id]: Math.max(0, r1((dr[id] || 0) + d)) }));
   const saveCheck = () => {
     const nextItems = data.items.map(it => {
+      if (it.kind === "pantry") return it; // 常備品は棚卸し対象外
       const actual = checkDraft && checkDraft[it.id] !== undefined ? checkDraft[it.id] : estStock(it);
       const d = Math.max(1, daysSince(it.stockDate) || 1);
       const consumed = it.stock + (it.purchasedSince || 0) - actual;
@@ -550,16 +590,17 @@ export default function UchiNoZaiko() {
   };
 
   // 在庫タブでの品目追加（②の入力込み）
-  const beginAdd = (e) => setPendingAdd({ ...e, qty: 1, days: e.cat === "daily" ? 30 : 7 });
+  const beginAdd = (e) => setPendingAdd({ ...e, qty: 1, days: e.pantry ? null : (e.cat === "daily" ? 30 : 7) });
   const commitAdd = () => {
     if (!pendingAdd) return;
     const days = Math.max(1, parseFloat(pendingAdd.days) || 7);
     persist({
       ...data,
       items: [...data.items, {
-        id: uid(), name: pendingAdd.name, unit: pendingAdd.unit, cat: pendingAdd.cat,
+        id: uid(), name: pendingAdd.name, unit: pendingAdd.unit, cat: pendingAdd.cat, g: pendingAdd.g || "other",
         stock: pendingAdd.qty, stockDate: today, purchasedSince: 0,
-        ratePerDay: r1(Math.max(0.01, pendingAdd.qty / days)), buyQty: 1, kind: "regular", snoozeUntil: "",
+        ratePerDay: pendingAdd.pantry ? 0 : r1(Math.max(0.01, pendingAdd.qty / days)),
+        buyQty: 1, kind: pendingAdd.pantry ? "pantry" : "regular", snoozeUntil: "",
       }],
     });
     showToast(`${pendingAdd.name} を追加しました`);
@@ -568,7 +609,7 @@ export default function UchiNoZaiko() {
   const delItem = (id) => persist({ ...data, items: data.items.filter(i => i.id !== id) });
 
   // AI
-  const inventoryText = () => items.filter(i => i.est > 0 && i.cat !== "daily").map(i => `${i.name} ${i.est}${i.unit}（あと約${i.dz}日で消費予定）`).join("、");
+  const inventoryText = () => items.filter(i => i.est > 0 && i.cat !== "daily").map(i => i.kind === "pantry" ? `${i.name}（常備）` : `${i.name} ${fmtQ(i.est, i.unit)}${i.unit}（あと約${i.dz}日で消費予定）`).join("、");
   const suggestMenus = async () => {
     setMenuLoading(true); setMenus(null); setMenuSource("");
     const inv = items.filter(i => i.est > 0 && i.cat !== "daily");
@@ -615,7 +656,7 @@ export default function UchiNoZaiko() {
   };
 
   const existingNames = new Set(data.items.map(i => norm(i.name)));
-  const stockPill = (i) => i.est <= 0.01 ? ["red", "切れている頃"] : i.dz <= 2 ? ["amber", `あと約${i.dz}日`] : ["green", `あと約${i.dz}日`];
+  const stockPill = (i) => i.kind === "pantry" ? ["green", "常備"] : i.est <= 0.01 ? ["red", "切れている頃"] : i.dz <= 2 ? ["amber", `あと約${i.dz}日`] : ["green", `あと約${i.dz}日`];
 
   // ================= pages =================
   // ザイコくんのひとこと（状況に応じて変化）
@@ -660,8 +701,8 @@ export default function UchiNoZaiko() {
                 return (
                   <div className="uz-row" key={i.id}>
                     <div className="uz-row-main">
-                      <div className="uz-row-title">{i.name}</div>
-                      <div className="uz-row-sub">残り約 {i.est}{i.unit}・{r1(i.ratePerDay)}{i.unit}/日ペース{i.kind === "oneoff" ? "・都度" : ""}</div>
+                      <div className="uz-row-title">{itemIcon(i)} {i.name}</div>
+                      <div className="uz-row-sub">{i.kind === "pantry" ? "なくなったら買い物メモへどうぞ" : `残り約 ${fmtQ(i.est, i.unit)}${i.unit}・${r1(i.ratePerDay)}${i.unit}/日ペース${i.kind === "oneoff" ? "・都度" : ""}`}</div>
                     </div>
                     <span className={`uz-pill ${cls}`}>{label}</span>
                   </div>
@@ -682,18 +723,22 @@ export default function UchiNoZaiko() {
               <button className="uz-ghost" style={{ width: "100%", marginTop: 6 }} onClick={() => setAddOpen(false)}>閉じる</button>
             </>) : (<>
               <div className="uz-row" style={{ padding: "6px 0" }}>
-                <div className="uz-row-main"><div className="uz-row-title">{catIcon(pendingAdd.cat)} {pendingAdd.name}</div><div className="uz-row-sub">いまある数</div></div>
+                <div className="uz-row-main"><div className="uz-row-title">{itemIcon(pendingAdd)} {pendingAdd.name}</div><div className="uz-row-sub">いまある数</div></div>
                 <div className="uz-step">
-                  <button onClick={() => setPendingAdd(p => ({ ...p, qty: Math.max(0.5, r1(p.qty - 0.5)) }))}>−</button>
+                  <button onClick={() => setPendingAdd(p => ({ ...p, qty: Math.max(stepOf(p.unit), r1(p.qty - stepOf(p.unit))) }))}>−</button>
                   <div className="uz-step-val">{pendingAdd.qty}<small>{pendingAdd.unit}</small></div>
-                  <button onClick={() => setPendingAdd(p => ({ ...p, qty: r1(p.qty + 0.5) }))}>＋</button>
+                  <button onClick={() => setPendingAdd(p => ({ ...p, qty: r1(p.qty + stepOf(p.unit)) }))}>＋</button>
                 </div>
               </div>
-              <div className="uz-row" style={{ padding: "6px 0" }}>
-                <div className="uz-row-main"><div className="uz-row-sub">この量を何日で使い切る？</div></div>
-                <input className="uz-days-input" type="number" min="1" value={pendingAdd.days} onChange={e => setPendingAdd(p => ({ ...p, days: e.target.value }))} />
-                <span style={{ fontSize: 12, color: "#8A8D9C" }}>日</span>
-              </div>
+              {pendingAdd.pantry ? (
+                <div className="uz-note">調味料などの常備品です。「ずっとある」扱いになります。</div>
+              ) : (
+                <div className="uz-row" style={{ padding: "6px 0" }}>
+                  <div className="uz-row-main"><div className="uz-row-sub">この量を何日で使い切る？</div></div>
+                  <input className="uz-days-input" type="number" min="1" value={pendingAdd.days} onChange={e => setPendingAdd(p => ({ ...p, days: e.target.value }))} />
+                  <span style={{ fontSize: 12, color: "#8A8C9C" }}>日</span>
+                </div>
+              )}
               <div className="uz-add">
                 <button className="uz-ghost" style={{ flex: 1 }} onClick={() => setPendingAdd(null)}>← 戻る</button>
                 <button className="uz-btn" style={{ flex: 2 }} onClick={commitAdd}>この内容で追加</button>
@@ -711,6 +756,10 @@ export default function UchiNoZaiko() {
     <>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">買い物</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={66} mood={needs.length > 0 ? "alert" : "happy"} />
+        <div className="uz-bubble">{needs.length > 0 ? `メモの分もあわせて${shopCount}点だよ。ボクのおすすめの量も書いておいたからね！` : "いまは買うものナシ！えらいえらい"}</div>
+      </div>
       <div className="uz-page-sub">切れそうなものと、1週間もたせるための購入量を提案します。数は直せますし、見送りもできます。</div>
 
       {needs.length > 0 && (<>
@@ -721,13 +770,13 @@ export default function UchiNoZaiko() {
             return (
               <div className="uz-row" key={it.id}>
                 <div className="uz-row-main">
-                  <div className="uz-row-title">{catIcon(it.cat)} {it.name}</div>
-                  <div className="uz-row-sub">残り約{it.est}{it.unit} → <b style={{ color: "#5C6BC0" }}>{sq}{it.unit}</b> 買うと約1週間もちます</div>
+                  <div className="uz-row-title">{itemIcon(it)} {it.name}</div>
+                  <div className="uz-row-sub">残り約{fmtQ(it.est, it.unit)}{it.unit} → <b style={{ color: "#FF7A59" }}>{sq}{it.unit}</b> 買うと約1週間もちます</div>
                 </div>
                 <div className="uz-step">
-                  <button onClick={() => setShopQty(s => ({ ...s, [it.id]: Math.max(0.5, r1(sq - 0.5)) }))}>−</button>
+                  <button onClick={() => setShopQty(s => ({ ...s, [it.id]: Math.max(stepOf(it.unit), r1(sq - stepOf(it.unit))) }))}>−</button>
                   <div className="uz-step-val">{sq}<small>{it.unit}</small></div>
-                  <button onClick={() => setShopQty(s => ({ ...s, [it.id]: r1(sq + 0.5) }))}>＋</button>
+                  <button onClick={() => setShopQty(s => ({ ...s, [it.id]: r1(sq + stepOf(it.unit)) }))}>＋</button>
                 </div>
                 <button className="uz-buy" onClick={() => markBought(it, sq)}>買った</button>
                 <button className="uz-del" title="今回は見送る" onClick={() => snooze(it)}>⏸</button>
@@ -755,7 +804,7 @@ export default function UchiNoZaiko() {
         <button className="uz-btn" onClick={addExtra}>追加</button>
       </div>
 
-      {shopCount === 0 && <div className="uz-card" style={{ marginTop: 14 }}><div className="uz-empty"><div className="uz-empty-big">📦</div>ザイコくん「いまは足りてるよ！」<br />切れそうになったら自動でここに並びます。</div></div>}
+      {shopCount === 0 && <div className="uz-card" style={{ marginTop: 14 }}><div className="uz-empty"><div className="uz-empty-big">🧺</div>切れそうになったら、自動でここに並びます。</div></div>}
 
       <div className="uz-group-label">買ったものをサッと記録</div>
       <div className="uz-add" style={{ marginTop: 0 }}>
@@ -799,6 +848,10 @@ export default function UchiNoZaiko() {
     <>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">献立</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={66} />
+        <div className="uz-bubble">今夜はなに作る？家にあるもので考えるよ〜！</div>
+      </div>
       <div className="uz-page-sub">いま家にある（と推定される）食材：{inventoryText() || "なし"}</div>
       <button className="uz-ai-btn" onClick={suggestMenus} disabled={menuLoading}>
         <span className="uz-ai-icon">{menuLoading ? <span className="uz-spin">◐</span> : "🍳"}</span>
@@ -810,7 +863,7 @@ export default function UchiNoZaiko() {
       {menus && menuSource === "local" && menus.length > 0 && data.aiEnabled && (
         <div className="uz-note" style={{ marginTop: 0, marginBottom: 10 }}>⚠️ AIに接続できなかったため、内蔵レシピから提案しています。</div>
       )}
-      {menus && menus.length === 0 && <div className="uz-empty"><div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}><ZaikoKun size={64} mood="alert" /></div>ザイコくん「うーん、いい献立が思いつかない…食材を追加してもう一回きいてみて！」</div>}
+      {menus && menus.length === 0 && <div className="uz-empty">うーん、いい献立が思いつかない…食材を追加してもう一回きいてみて！</div>}
       {menus && menus.map((m, i) => (
         <div className="uz-menu-card" key={i}>
           <div className="uz-menu-name">{m.name}</div>
@@ -829,9 +882,13 @@ export default function UchiNoZaiko() {
     <>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">棚卸し</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={66} />
+        <div className="uz-bubble">ボクの予想と答え合わせ！実際に残ってる数に直してね</div>
+      </div>
       <div className="uz-page-sub">実際の残量に合わせて数字を直してください（表示は現在の推定値）。差から消費ペースを学習し、予測が週ごとに正確になります。</div>
       {["food", "daily"].map(cat => {
-        const group = items.filter(i => i.cat === cat);
+        const group = items.filter(i => i.cat === cat && i.kind !== "pantry");
         if (group.length === 0) return null;
         return (
           <div key={cat}>
@@ -847,9 +904,9 @@ export default function UchiNoZaiko() {
                       <div className="uz-row-sub">推定 {it.est}{it.unit}{diff !== 0 && <span style={{ color: diff > 0 ? "#5A8A6A" : "#C0763B" }}>（{diff > 0 ? `+${diff}` : diff} 補正）</span>}</div>
                     </div>
                     <div className="uz-step">
-                      <button onClick={() => stepDraft(it.id, -0.5)}>−</button>
+                      <button onClick={() => stepDraft(it.id, -stepOf(it.unit))}>−</button>
                       <div className="uz-step-val">{v}<small>{it.unit}</small></div>
-                      <button onClick={() => stepDraft(it.id, +0.5)}>＋</button>
+                      <button onClick={() => stepDraft(it.id, +stepOf(it.unit))}>＋</button>
                     </div>
                   </div>
                 );
@@ -868,24 +925,28 @@ export default function UchiNoZaiko() {
     <>
       <div className="uz-brandrow"><span className="uz-logo">Z</span><span className="uz-brand">UCHI-NO-ZAIKO</span></div>
       <div className="uz-page-title">設定</div>
+      <div className="uz-mascot-row">
+        <ZaikoKun size={66} />
+        <div className="uz-bubble">ここでボクの調整ができるよ。バックアップも忘れずにね！</div>
+      </div>
       <div className="uz-group-label">品目の管理</div>
       <div className="uz-card">
         {data.items.map(it => (
           <div className="uz-row" key={it.id}>
             <div className="uz-row-main">
-              <div className="uz-row-title">{catIcon(it.cat)} {it.name}</div>
-              <div className="uz-row-sub">約{r1(it.ratePerDay)}{it.unit}/日ペース</div>
+              <div className="uz-row-title">{itemIcon(it)} {it.name}</div>
+              <div className="uz-row-sub">{it.kind === "pantry" ? "常備品（減らない扱い）" : `約${r1(it.ratePerDay)}${it.unit}/日ペース`}</div>
             </div>
             <button
               className="uz-ghost"
-              style={it.kind === "oneoff" ? {} : { borderColor: "#5C6BC0", color: "#5C6BC0", fontWeight: 700 }}
-              onClick={() => persist({ ...data, items: data.items.map(x => x.id === it.id ? { ...x, kind: x.kind === "oneoff" ? "regular" : "oneoff" } : x) })}
-            >{it.kind === "oneoff" ? "都度" : "定番"}</button>
+              style={it.kind === "regular" ? { borderColor: "#FF7A59", color: "#FF7A59", fontWeight: 800 } : it.kind === "pantry" ? { borderColor: "#2FBFA0", color: "#2FBFA0", fontWeight: 800 } : {}}
+              onClick={() => persist({ ...data, items: data.items.map(x => x.id === it.id ? { ...x, kind: x.kind === "regular" ? "oneoff" : x.kind === "oneoff" ? "pantry" : "regular", ratePerDay: x.kind === "oneoff" ? 0 : (x.ratePerDay || 0.3) } : x) })}
+            >{it.kind === "oneoff" ? "都度" : it.kind === "pantry" ? "常備" : "定番"}</button>
             <button className="uz-del" onClick={() => delItem(it.id)}>×</button>
           </div>
         ))}
       </div>
-      <div className="uz-note">「定番」は切れそうになると買い物提案に並びます。「都度」は使い切ったら静かに消えます（催促しません）。タップで切替。</div>
+      <div className="uz-note">「定番」は切れそうになると買い物提案に並びます。「都度」は使い切ったら静かに消えます（催促しません）。タップで「定番→都度→常備」と切替。常備＝調味料などずっとある扱い。</div>
 
       <div className="uz-group-label">献立・買い足しの提案エンジン</div>
       <div className="uz-card">

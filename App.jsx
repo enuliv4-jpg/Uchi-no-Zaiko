@@ -53,6 +53,16 @@ const CAT_LABEL = { food: "食材", daily: "日用品" };
 const catIcon = (c) => (c === "daily" ? "🧻" : "🍽");
 const GROUP_ICONS = { veg: "🥬", fruit: "🍎", meat: "🥩", fish: "🐟", egg: "🥚", milk: "🥛", dairy: "🧀", soy: "🫘", staple: "🍚", seasoning: "🧂", coffee: "☕️", drink: "🥤", other: "🍱", daily: "🧻" };
 const itemIcon = (it) => GROUP_ICONS[it.g] || (it.cat === "daily" ? "🧻" : "🍱");
+// 名前からカタログを引いてグループ・常備フラグを推定（旧データの移行用）
+const lookupCatalog = (name) => CATALOG.find(([n]) => norm(n) === norm(name) || norm(name).includes(norm(n)) || norm(n).includes(norm(name)));
+const migrateItem = (i) => {
+  if (i.g) return i;
+  const hit = lookupCatalog(i.name);
+  const g = hit ? (hit[4] || "other") : (i.cat === "daily" ? "daily" : "other");
+  const isPantry = !!(hit && hit[5]);
+  if (isPantry && i.kind !== "pantry") return { ...i, g, kind: "pantry", ratePerDay: 0 };
+  return { ...i, g };
+};
 const searchCatalog = (q, existingNames) => {
   const nq = norm(q);
   if (!nq) return [];
@@ -164,6 +174,8 @@ const css = `
     border:8px solid transparent; border-right-color:var(--line); border-left:none; }
   .uz-bubble::after { content:""; position:absolute; left:-6px; top:50%; transform:translateY(-50%);
     border:7px solid transparent; border-right-color:#fff; border-left:none; }
+  .uz-steps { margin:10px 0 0; padding-left:20px; font-size:12.5px; line-height:1.95; color:var(--ink); }
+  .uz-steps li::marker { color:var(--pop); font-weight:800; }
   .uz-spin { display:inline-block; animation:uzrot 1s linear infinite; }
   @keyframes uzrot { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
@@ -186,56 +198,56 @@ async function callSuggestApi(payload) {
 // 基本調味料は「家にある前提」として在庫を問わない
 const ASSUMED = new Set(["醤油", "みりん", "料理酒", "酢", "砂糖", "塩", "こしょう", "サラダ油", "ごま油", "オリーブオイル", "ケチャップ", "マヨネーズ", "めんつゆ", "ポン酢", "コンソメ", "鶏ガラスープの素", "だしの素", "片栗粉", "小麦粉", "パン粉", "味噌"]);
 const LOCAL_RECIPES = [
-  { name: "肉じゃが", uses: ["じゃがいも", "玉ねぎ", "にんじん", "豚"], point: "根菜をまとめて消費できます" },
-  { name: "カレーライス", uses: ["じゃがいも", "玉ねぎ", "にんじん", "カレールー"], point: "野菜の在庫整理に最強です" },
-  { name: "キーマカレー", uses: ["ひき肉", "玉ねぎ", "にんじん", "カレールー"], point: "ひき肉があれば15分" },
-  { name: "クリームシチュー", uses: ["じゃがいも", "にんじん", "玉ねぎ", "牛乳"], point: "牛乳をたっぷり消費" },
-  { name: "親子丼", uses: ["鶏もも", "卵", "玉ねぎ"], point: "15分で完成します" },
-  { name: "そぼろ丼", uses: ["ひき肉", "卵", "米"], point: "甘辛そぼろと炒り卵で" },
-  { name: "オムライス", uses: ["卵", "米", "玉ねぎ"], point: "卵を2〜3個使えます" },
-  { name: "チャーハン", uses: ["卵", "長ネギ", "米"], point: "半端な具の受け皿に" },
-  { name: "天津飯", uses: ["卵", "米", "長ネギ"], point: "卵が余った日の丼" },
-  { name: "だし巻き卵", uses: ["卵"], point: "卵が多い日の定番" },
-  { name: "卵とトマトの中華炒め", uses: ["卵", "トマト"], point: "5分でもう一品" },
-  { name: "野菜炒め", uses: ["キャベツ", "豚", "ピーマン"], point: "残り野菜なんでも歓迎" },
-  { name: "回鍋肉", uses: ["キャベツ", "豚バラ"], point: "キャベツを一気に消費" },
-  { name: "お好み焼き", uses: ["キャベツ", "卵", "豚バラ"], point: "キャベツ半玉が消えます" },
-  { name: "焼きそば", uses: ["中華麺", "キャベツ", "豚"], point: "野菜多めで栄養も" },
-  { name: "焼きうどん", uses: ["うどん", "キャベツ", "豚"], point: "冷蔵庫整理の定番" },
-  { name: "豚の生姜焼き", uses: ["豚ロース", "玉ねぎ", "しょうが"], point: "定番の時短おかず" },
-  { name: "豚キムチ", uses: ["豚バラ", "キムチ"], point: "5分で完成のご飯泥棒" },
-  { name: "豚汁", uses: ["豚", "大根", "にんじん"], point: "根菜と味噌の消費に" },
-  { name: "鶏の照り焼き", uses: ["鶏もも"], point: "調味料は家のものだけ" },
-  { name: "唐揚げ", uses: ["鶏もも", "にんにく", "しょうが"], point: "多めに揚げて翌日弁当に" },
-  { name: "棒棒鶏", uses: ["鶏むね", "きゅうり"], point: "きゅうり消費＆さっぱり" },
-  { name: "ハンバーグ", uses: ["合いびき肉", "玉ねぎ", "卵"], point: "こねて焼くだけ" },
-  { name: "麻婆豆腐", uses: ["豆腐", "ひき肉"], point: "豆腐の期限前に" },
-  { name: "麻婆なす", uses: ["なす", "ひき肉"], point: "なすが余っていたら" },
-  { name: "豆腐ハンバーグ", uses: ["豆腐", "ひき肉", "玉ねぎ"], point: "ヘルシーに量増し" },
-  { name: "冷奴", uses: ["豆腐", "長ネギ"], point: "切るだけの一品" },
-  { name: "味噌汁（豆腐と長ネギ）", uses: ["豆腐", "長ネギ"], point: "毎日の一杯に" },
-  { name: "ポテトサラダ", uses: ["じゃがいも", "きゅうり", "卵"], point: "作り置きにも便利" },
-  { name: "きゅうりの浅漬け", uses: ["きゅうり"], point: "きゅうりが余ったら即これ" },
-  { name: "トマトときゅうりのサラダ", uses: ["トマト", "きゅうり"], point: "切って和えるだけ" },
-  { name: "ほうれん草のおひたし", uses: ["ほうれん草"], point: "茹でて3分" },
-  { name: "小松菜と油揚げの煮浸し", uses: ["小松菜", "油揚げ"], point: "青菜の期限前に" },
-  { name: "なすとピーマンの味噌炒め", uses: ["なす", "ピーマン"], point: "夏野菜の消費に" },
-  { name: "かぼちゃの煮物", uses: ["かぼちゃ"], point: "ほくほくの副菜" },
-  { name: "鮭のムニエル", uses: ["鮭", "バター"], point: "切身の期限前に" },
-  { name: "鮭ときのこのホイル焼き", uses: ["鮭", "しめじ", "玉ねぎ"], point: "包んで焼くだけ" },
-  { name: "サバの味噌煮", uses: ["サバ", "しょうが"], point: "青魚は早めに消費" },
-  { name: "ぶり大根", uses: ["ぶり", "大根"], point: "大根1本の使い道に" },
-  { name: "ナポリタン", uses: ["パスタ", "玉ねぎ", "ピーマン", "ソーセージ"], point: "喫茶店の味を家で" },
-  { name: "ペペロンチーノ", uses: ["パスタ", "にんにく"], point: "在庫が少ない日の救世主" },
-  { name: "カルボナーラ", uses: ["パスタ", "卵", "ベーコン", "チーズ"], point: "卵と乳製品の消費に" },
-  { name: "グラタン", uses: ["牛乳", "チーズ", "玉ねぎ", "じゃがいも"], point: "乳製品をまとめて" },
-  { name: "きのこの炊き込みご飯", uses: ["米", "しめじ", "油揚げ"], point: "きのこの期限前に" },
-  { name: "野菜スープ", uses: ["キャベツ", "にんじん", "玉ねぎ"], point: "残り野菜を全部投入" },
-  { name: "ミネストローネ", uses: ["トマト", "玉ねぎ", "にんじん"], point: "トマトの消費に" },
-  { name: "フレンチトースト", uses: ["食パン", "卵", "牛乳"], point: "朝食が少し豪華に" },
-  { name: "ピザトースト", uses: ["食パン", "チーズ"], point: "5分で満足の一枚" },
-  { name: "バナナヨーグルト", uses: ["バナナ", "ヨーグルト"], point: "朝食やおやつに" },
-  { name: "バナナジュース", uses: ["バナナ", "牛乳"], point: "完熟バナナの救済に" },
+  { name: "肉じゃが", uses: ["じゃがいも", "玉ねぎ", "にんじん", "豚"], point: "根菜をまとめて消費できます", time: "約25分", steps: ["じゃがいも・玉ねぎ・にんじんを一口大に切る", "豚肉→野菜の順に油で炒める", "ひたひたの水と醤油・みりん・砂糖各大2で15分煮る"] },
+  { name: "カレーライス", uses: ["じゃがいも", "玉ねぎ", "にんじん", "カレールー"], point: "野菜の在庫整理に最強です", time: "約30分", steps: ["具材を一口大に切って炒める", "水を加えて15分煮る", "火を止めてルーを溶かし、さらに5分煮込む"] },
+  { name: "キーマカレー", uses: ["ひき肉", "玉ねぎ", "にんじん", "カレールー"], point: "ひき肉があれば15分", time: "約20分", steps: ["玉ねぎ・にんじんをみじん切りにする", "ひき肉と一緒に炒める", "水少なめ＋ルーで10分煮る"] },
+  { name: "クリームシチュー", uses: ["じゃがいも", "にんじん", "玉ねぎ", "牛乳"], point: "牛乳をたっぷり消費", time: "約30分", steps: ["具材を切って炒める", "水で15分煮る", "牛乳とルーを加えて5分煮る"] },
+  { name: "親子丼", uses: ["鶏もも", "卵", "玉ねぎ"], point: "15分で完成します", time: "約15分", steps: ["めんつゆ＋水で玉ねぎと鶏を煮る", "溶き卵を回し入れ半熟でとじる", "ご飯にのせる"] },
+  { name: "そぼろ丼", uses: ["ひき肉", "卵", "米"], point: "甘辛そぼろと炒り卵で", time: "約15分", steps: ["ひき肉を醤油・砂糖で甘辛に炒る", "別で炒り卵を作る", "ご飯に2色をのせる"] },
+  { name: "オムライス", uses: ["卵", "米", "玉ねぎ"], point: "卵を2〜3個使えます", time: "約20分", steps: ["玉ねぎと具をケチャップでご飯と炒める", "薄焼き卵を作る", "ライスを包んでケチャップをかける"] },
+  { name: "チャーハン", uses: ["卵", "長ネギ", "米"], point: "半端な具の受け皿に", time: "約10分", steps: ["溶き卵を半熟で炒めて取り出す", "ご飯とネギを強火で炒める", "卵を戻して塩胡椒・醤油ひと回し"] },
+  { name: "天津飯", uses: ["卵", "米", "長ネギ"], point: "卵が余った日の丼", time: "約15分", steps: ["ネギ入りの卵焼きをふんわり焼いてご飯にのせる", "醤油・酢・砂糖＋水溶き片栗粉の甘酢あんをかける"] },
+  { name: "だし巻き卵", uses: ["卵"], point: "卵が多い日の定番", time: "約10分", steps: ["卵3個＋だし大さじ3を混ぜる", "卵液を数回に分け、巻きながら焼く"] },
+  { name: "卵とトマトの中華炒め", uses: ["卵", "トマト"], point: "5分でもう一品", time: "約8分", steps: ["トマトをくし切りにしてさっと炒め取り出す", "ふんわり炒め卵を作る", "トマトを戻し塩胡椒で調える"] },
+  { name: "野菜炒め", uses: ["キャベツ", "豚", "ピーマン"], point: "残り野菜なんでも歓迎", time: "約12分", steps: ["豚肉を炒める", "固い野菜→葉物の順に強火で炒める", "塩胡椒＋醤油ひと回し"] },
+  { name: "回鍋肉", uses: ["キャベツ", "豚バラ"], point: "キャベツを一気に消費", time: "約12分", steps: ["豚バラを炒めて取り出す", "キャベツを強火で炒める", "肉を戻して味噌・砂糖・醤油のたれを絡める"] },
+  { name: "お好み焼き", uses: ["キャベツ", "卵", "豚バラ"], point: "キャベツ半玉が消えます", time: "約20分", steps: ["小麦粉＋水＋卵＋千切りキャベツを混ぜる", "豚バラをのせて両面を焼く", "ソース・マヨで仕上げる"] },
+  { name: "焼きそば", uses: ["中華麺", "キャベツ", "豚"], point: "野菜多めで栄養も", time: "約12分", steps: ["肉と野菜を炒める", "麺と水少々を加えてほぐす", "ソースを絡める"] },
+  { name: "焼きうどん", uses: ["うどん", "キャベツ", "豚"], point: "冷蔵庫整理の定番", time: "約12分", steps: ["肉と野菜を炒める", "うどんを加えてほぐす", "醤油＋だしの素で味付け"] },
+  { name: "豚の生姜焼き", uses: ["豚ロース", "玉ねぎ", "しょうが"], point: "定番の時短おかず", time: "約12分", steps: ["豚と玉ねぎを焼く", "すりおろし生姜＋醤油・みりん・酒を絡める"] },
+  { name: "豚キムチ", uses: ["豚バラ", "キムチ"], point: "5分で完成のご飯泥棒", time: "約8分", steps: ["豚バラを炒める", "キムチを加えて炒め合わせる", "仕上げにごま油"] },
+  { name: "豚汁", uses: ["豚", "大根", "にんじん"], point: "根菜と味噌の消費に", time: "約25分", steps: ["豚と根菜をごま油で炒める", "だしで柔らかくなるまで煮る", "味噌を溶き入れる"] },
+  { name: "鶏の照り焼き", uses: ["鶏もも"], point: "調味料は家のものだけ", time: "約15分", steps: ["鶏ももを皮目から中火で焼く", "裏返して火を通す", "醤油・みりん・砂糖各大1.5を煮絡める"] },
+  { name: "唐揚げ", uses: ["鶏もも", "にんにく", "しょうが"], point: "多めに揚げて翌日弁当に", time: "約40分", steps: ["一口大の鶏を醤油・にんにく・生姜に30分漬ける", "片栗粉をまぶす", "170℃の油で4〜5分揚げる"] },
+  { name: "棒棒鶏", uses: ["鶏むね", "きゅうり"], point: "きゅうり消費＆さっぱり", time: "約20分", steps: ["鶏むねを茹でて（レンジ可）裂く", "きゅうりを千切りにする", "マヨ＋ごま油＋醤油＋酢のごまだれをかける"] },
+  { name: "ハンバーグ", uses: ["合いびき肉", "玉ねぎ", "卵"], point: "こねて焼くだけ", time: "約25分", steps: ["炒め玉ねぎ・卵・パン粉と肉をこねる", "成形して両面を焼く", "フタをして弱火5分蒸し焼き"] },
+  { name: "麻婆豆腐", uses: ["豆腐", "ひき肉"], point: "豆腐の期限前に", time: "約15分", steps: ["ひき肉を味噌・醤油・豆板醤で炒める", "水＋鶏ガラと豆腐を加えて煮る", "水溶き片栗粉でとろみをつける"] },
+  { name: "麻婆なす", uses: ["なす", "ひき肉"], point: "なすが余っていたら", time: "約15分", steps: ["なすを多めの油で焼いて取り出す", "ひき肉を炒めてたれを作る", "なすを戻して絡める"] },
+  { name: "豆腐ハンバーグ", uses: ["豆腐", "ひき肉", "玉ねぎ"], point: "ヘルシーに量増し", time: "約20分", steps: ["水切り豆腐とひき肉・玉ねぎをこねる", "成形して両面を焼く", "ポン酢か照り焼きだれで"] },
+  { name: "冷奴", uses: ["豆腐", "長ネギ"], point: "切るだけの一品", time: "約3分", steps: ["豆腐を切る", "刻みネギと醤油（＋生姜）をのせる"] },
+  { name: "味噌汁（豆腐と長ネギ）", uses: ["豆腐", "長ネギ"], point: "毎日の一杯に", time: "約10分", steps: ["だしを沸かす", "豆腐とネギを入れる", "火を止めて味噌を溶く"] },
+  { name: "ポテトサラダ", uses: ["じゃがいも", "きゅうり", "卵"], point: "作り置きにも便利", time: "約20分", steps: ["じゃがいもを茹でて潰す", "塩もみきゅうり・ゆで卵を混ぜる", "マヨ＋酢少々で和える"] },
+  { name: "きゅうりの浅漬け", uses: ["きゅうり"], point: "きゅうりが余ったら即これ", time: "約12分", steps: ["きゅうりを乱切りか薄切りにする", "塩（＋だしの素）で揉んで10分置く"] },
+  { name: "トマトときゅうりのサラダ", uses: ["トマト", "きゅうり"], point: "切って和えるだけ", time: "約5分", steps: ["トマトときゅうりを角切りにする", "オリーブオイル＋塩＋酢で和える"] },
+  { name: "ほうれん草のおひたし", uses: ["ほうれん草"], point: "茹でて3分", time: "約8分", steps: ["塩ゆでして冷水にとる", "絞って切り、醤油＋だしをかける"] },
+  { name: "小松菜と油揚げの煮浸し", uses: ["小松菜", "油揚げ"], point: "青菜の期限前に", time: "約10分", steps: ["小松菜と油揚げを切る", "めんつゆ＋水で5分煮る"] },
+  { name: "なすとピーマンの味噌炒め", uses: ["なす", "ピーマン"], point: "夏野菜の消費に", time: "約12分", steps: ["なす・ピーマンを乱切りで炒める", "味噌・みりん・砂糖のたれを絡める"] },
+  { name: "かぼちゃの煮物", uses: ["かぼちゃ"], point: "ほくほくの副菜", time: "約20分", steps: ["かぼちゃを一口大に切る", "ひたひたの水＋醤油・みりん・砂糖で10分煮て冷ます"] },
+  { name: "鮭のムニエル", uses: ["鮭", "バター"], point: "切身の期限前に", time: "約12分", steps: ["鮭に塩胡椒して小麦粉をまぶす", "バターで両面をこんがり焼く", "レモンや醤油少々で"] },
+  { name: "鮭ときのこのホイル焼き", uses: ["鮭", "しめじ", "玉ねぎ"], point: "包んで焼くだけ", time: "約20分", steps: ["ホイルに玉ねぎ・鮭・きのこ・バターをのせて包む", "フライパンで10分蒸し焼き", "ポン酢でいただく"] },
+  { name: "サバの味噌煮", uses: ["サバ", "しょうが"], point: "青魚は早めに消費", time: "約20分", steps: ["サバに熱湯をかけて臭みを取る", "水・味噌・砂糖・みりん・生姜で落しぶたをして10分煮る"] },
+  { name: "ぶり大根", uses: ["ぶり", "大根"], point: "大根1本の使い道に", time: "約35分", steps: ["大根を下茹でする", "ぶりと醤油・みりん・砂糖・生姜で20分煮る"] },
+  { name: "ナポリタン", uses: ["パスタ", "玉ねぎ", "ピーマン", "ソーセージ"], point: "喫茶店の味を家で", time: "約15分", steps: ["具材を炒める", "茹でた麺を加える", "ケチャップ多めで炒め合わせる"] },
+  { name: "ペペロンチーノ", uses: ["パスタ", "にんにく"], point: "在庫が少ない日の救世主", time: "約15分", steps: ["オリーブオイルでにんにくを弱火で香り出し", "茹で汁を少し加えて混ぜる", "茹でた麺と塩で和える"] },
+  { name: "カルボナーラ", uses: ["パスタ", "卵", "ベーコン", "チーズ"], point: "卵と乳製品の消費に", time: "約15分", steps: ["ベーコンを炒める", "卵＋チーズ＋黒胡椒を混ぜておく", "火を止めて茹でた麺と手早く和える"] },
+  { name: "グラタン", uses: ["牛乳", "チーズ", "玉ねぎ", "じゃがいも"], point: "乳製品をまとめて", time: "約30分", steps: ["具を炒めて小麦粉をふる", "牛乳を加えてとろみをつける", "チーズをのせてオーブンで焼き色をつける"] },
+  { name: "きのこの炊き込みご飯", uses: ["米", "しめじ", "油揚げ"], point: "きのこの期限前に", time: "約60分", steps: ["米に醤油・みりん・だしを加える", "きのこと油揚げをのせて炊飯する"] },
+  { name: "野菜スープ", uses: ["キャベツ", "にんじん", "玉ねぎ"], point: "残り野菜を全部投入", time: "約15分", steps: ["野菜を小さめに切る", "水＋コンソメで10分煮て塩胡椒"] },
+  { name: "ミネストローネ", uses: ["トマト", "玉ねぎ", "にんじん"], point: "トマトの消費に", time: "約20分", steps: ["野菜を角切りにして炒める", "トマトを潰しながら水と煮る", "コンソメ・塩胡椒で調える"] },
+  { name: "フレンチトースト", uses: ["食パン", "卵", "牛乳"], point: "朝食が少し豪華に", time: "約15分", steps: ["卵＋牛乳＋砂糖にパンを浸す", "バターで両面を弱火で焼く"] },
+  { name: "ピザトースト", uses: ["食パン", "チーズ"], point: "5分で満足の一枚", time: "約8分", steps: ["パンにケチャップを塗り具とチーズをのせる", "トースターで4〜5分焼く"] },
+  { name: "バナナヨーグルト", uses: ["バナナ", "ヨーグルト"], point: "朝食やおやつに", time: "約3分", steps: ["バナナを切ってヨーグルトと和える", "お好みではちみつをかける"] },
+  { name: "バナナジュース", uses: ["バナナ", "牛乳"], point: "完熟バナナの救済に", time: "約5分", steps: ["バナナと牛乳をミキサーにかける", "お好みではちみつを足す"] },
 ];
 const localMenuSuggest = (invItems) => {
   const names = invItems.map(i => ({ n: i.name, dz: i.dz }));
@@ -246,7 +258,7 @@ const localMenuSuggest = (invItems) => {
       const hits = real.map(u => ({ u, hit: has(u) })).filter(x => x.hit);
       const missing = real.filter(u => !has(u));
       const urgency = hits.length ? Math.min(...hits.map(x => x.hit.dz)) : 99;
-      return { name: rc.name, point: rc.point, uses: hits.map(x => x.hit.n), missing, score: hits.length * 2 - missing.length, urgency };
+      return { name: rc.name, point: rc.point, time: rc.time, steps: rc.steps, uses: hits.map(x => x.hit.n), missing, score: hits.length * 2 - missing.length, urgency };
     })
     .filter(r => r.uses.length >= 1 && r.missing.length <= 1)
     .sort((a, b) => (b.score - a.score) || (a.urgency - b.urgency))
@@ -463,6 +475,7 @@ export default function UchiNoZaiko() {
       const raw = window.localStorage.getItem("uchi-zaiko-v2");
       if (raw) loaded = { ...DEFAULT_DATA, ...JSON.parse(raw) };
     } catch (e) { /* 初回 */ }
+    loaded = { ...loaded, items: (loaded.items || []).map(migrateItem) };
     setData(loaded);
   }, []);
   const persist = useCallback(async (next) => {
@@ -867,11 +880,14 @@ export default function UchiNoZaiko() {
       {menus && menus.map((m, i) => (
         <div className="uz-menu-card" key={i}>
           <div className="uz-menu-name">{m.name}</div>
-          {m.point && <div className="uz-menu-point">{m.point}</div>}
+          {(m.point || m.time) && <div className="uz-menu-point">{m.point}{m.time ? `（${m.time}）` : ""}</div>}
           <div className="uz-menu-line">
             使う食材：{(m.uses || []).map(u => <span className="uz-ing" key={u}>{u}</span>)}
             {(m.missing || []).length > 0 && <><br />買い足し：{m.missing.map(u => <span className="uz-ing miss" key={u}>{u}</span>)}</>}
           </div>
+          {Array.isArray(m.steps) && m.steps.length > 0 && (
+            <ol className="uz-steps">{m.steps.map((st, j) => <li key={j}>{st}</li>)}</ol>
+          )}
           {(m.missing || []).length > 0 && <div style={{ marginTop: 8 }}><button className="uz-ghost" onClick={() => missingToList(m.missing)}>買い足しをリストへ</button></div>}
         </div>
       ))}
